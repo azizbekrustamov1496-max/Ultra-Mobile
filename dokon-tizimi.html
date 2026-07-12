@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Doʻkon Hisob-kitob Tizimi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  :root {
+    --navy: #0B3D66;
+    --navy-dark: #082C4A;
+    --accent: #1E6FB8;
+    --blue-stat: #1D5FA8;
+    --green: #1E9E5A;
+    --green-dark: #167A46;
+    --red-exp: #D63B3B;
+    --bg: #F4F7FA;
+    --card: #FFFFFF;
+    --border: #DCE3EA;
+    --text: #1B2733;
+    --text-mute: #6B7A89;
+    --ok-bg: #E8F3EC; --ok-border: #9BC9A9; --ok-text: #1F6B3A;
+    --bad-bg: #FBEAEA; --bad-border: #E3B3B3; --bad-text: #8A2E2E;
+  }
+  [data-theme="dark"] {
+    --navy: #1E6FB8;
+    --navy-dark: #0B3D66;
+    --accent: #3E8FD8;
+    --blue-stat: #4DA1E8;
+    --green: #2FBE72;
+    --green-dark: #1E9E5A;
+    --red-exp: #F0645A;
+    --bg: #0F1720;
+    --card: #182430;
+    --border: #2A3A48;
+    --text: #E7EDF3;
+    --text-mute: #93A3B3;
+    --ok-bg: #16301F; --ok-border: #2E6B45; --ok-text: #7ED89A;
+    --bad-bg: #3A1E1E; --bad-border: #7A3A3A; --bad-text: #E39A9A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif; transition: background .2s, color .2s;
+  }
+  .mf { font-family: 'JetBrains Mono', monospace; }
+  ::placeholder { color: var(--text-mute); }
+  input:focus, button:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .topbar {
+    background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+    color: #fff; padding: 16px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(11,61,102,0.25);
+  }
+  .topbar h1 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: 0.2px; }
+  .topbar .right { display: flex; align-items: center; gap: 14px; font-size: 13px; }
+  .theme-btn {
+    background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px;
+    border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .theme-btn:hover { background: rgba(255,255,255,0.28); }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .banner { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; display: none; }
+  .banner.error { background: var(--bad-bg); border: 1px solid var(--bad-border); color: var(--bad-text); }
+  .banner.status { background: var(--ok-bg); border: 1px solid var(--ok-border); color: var(--ok-text); }
+
+  .stats-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .stat-box {
+    flex: 1 1 120px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; box-shadow: 0 1px 4px rgba(20,40,60,0.05); transition: transform .15s;
+  }
+  .stat-box .label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-box .value { font-size: 21px; font-weight: 700; margin-top: 4px; font-family: 'JetBrains Mono', monospace; color: var(--blue-stat); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab-btn {
+    padding: 10px 16px; background: none; border: none; cursor: pointer; white-space: nowrap;
+    font-size: 13px; font-weight: 600; color: var(--text-mute); border-bottom: 2px solid transparent;
+    font-family: 'Inter', sans-serif; transition: color .15s;
+  }
+  .tab-btn:hover { color: var(--green); }
+  .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(20,40,60,0.05);
+  }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .field label { display: block; font-size: 11px; color: var(--text-mute); margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; padding: 9px 10px; border-radius: 7px; border: 1px solid var(--border);
+    font-size: 14px; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--green); }
+  .field input.mf { font-family: 'JetBrains Mono', monospace; }
+  .btn {
+    padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; margin-top: 10px;
+    transition: transform .1s, box-shadow .15s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: linear-gradient(135deg, var(--green), var(--green-dark)); color: #fff; }
+  .btn-danger { background: var(--bad-text); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); box-shadow: none; }
+
+  #expMonthTotal { color: var(--red-exp); }
+  .exp-amt { color: var(--red-exp); font-weight: 600; }
+
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-wrap input {
+    width: 100%; padding: 10px 12px 10px 34px; border-radius: 10px; border: 1px solid var(--border);
+    font-size: 14px; background: var(--card); color: var(--text); box-sizing: border-box;
+    transition: border-color .15s;
+  }
+  .search-wrap input:focus { border-color: var(--green); }
+  .search-wrap svg { position: absolute; left: 12px; top: 12px; color: var(--text-mute); }
+
+  /* Desktop table */
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(20,40,60,0.05); }
+  thead th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-mute); padding: 11px 12px; border-bottom: 1px solid var(--border); background: var(--bg);
+  }
+  tbody td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap;
+  }
+  .badge.on { border: 1px solid var(--ok-border); color: var(--ok-text); background: var(--ok-bg); }
+  .badge.off { border: 1px solid var(--bad-border); color: var(--bad-text); background: var(--bad-bg); }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-mute); border-radius: 5px; transition: background .15s; }
+  .icon-btn:hover { background: var(--bg); }
+  .icon-btn.del { color: var(--red-exp); }
+  .meta-line { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+
+  /* Mobile cards */
+  .item-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 8px; display: none; box-shadow: 0 1px 4px rgba(20,40,60,0.05);
+  }
+  .item-card .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .item-card .name { font-weight: 700; font-size: 15px; }
+  .item-card .prices { font-size: 12px; color: var(--text-mute); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .item-card .actions { display: flex; gap: 6px; margin-top: 8px; }
+
+  @media (max-width: 720px) {
+    table { display: none; }
+    .item-card { display: block; }
+  }
+
+  .empty { text-align: center; color: var(--text-mute); padding: 40px 20px; font-size: 14px; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-box {
+    background: var(--card); border-radius: 10px; padding: 24px; width: 90%; max-width: 340px;
+    border: 1px solid var(--border);
+  }
+  .modal-box h2 { font-size: 16px; margin: 0 0 6px; }
+  .modal-box p { font-size: 13px; color: var(--text-mute); margin: 0 0 14px; }
+
+  .config-warning {
+    background: #FFF4E5; border: 1px solid #E8C989; color: #6B4F1A;
+    padding: 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 20px;
+  }
+  .config-warning code { background: #00000010; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Kirish kodi oynasi (yangi qurilmada birinchi marta so'raladi) -->
+<div class="modal-overlay" id="codeModal" style="display:none;">
+  <div class="modal-box">
+    <h2>Kirish kodi</h2>
+    <p>Davom etish uchun kodni kiriting.</p>
+    <div class="field">
+      <input id="accessCodeInput" type="password" placeholder="Kod" />
+    </div>
+    <div id="codeError" style="color:var(--bad-text); font-size:12px; margin-bottom:10px; display:none;">Kod notoʻgʻri, qaytadan urinib koʻring.</div>
+    <button class="btn btn-primary" id="codeSubmit" style="width:100%;">Kirish</button>
+  </div>
+</div>
+
+<!-- Ism kiritish oynasi (dastur ochilganda bir marta) -->
+<div class="modal-overlay" id="nameModal" style="display:none;">
+  <div class="modal-box">
+    <h2>Xush kelibsiz</h2>
+    <p>Ismingizni kiriting — barcha amallar shu ism bilan yoziladi.</p>
+    <div class="field">
+      <input id="staffNameInput" placeholder="Ismingiz" />
+    </div>
+    <button class="btn btn-primary" id="staffNameSave" style="width:100%;">Kirish</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <h1>Doʻkon Hisob-kitob Tizimi</h1>
+  <div class="right">
+    <span id="staffLabel"></span>
+    <button class="theme-btn" id="themeToggle" title="Rejimni almashtirish">🌙</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div id="configWarning" class="config-warning" style="display:none;">
+    ⚠️ Firebase ulanmagan. Fayl pastidagi <code>firebaseConfig</code> qismiga oʻz kalitlaringizni qoʻying.
+  </div>
+
+  <div id="errorBanner" class="banner error"></div>
+  <div id="statusBanner" class="banner status"></div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
+    <div class="stat-box"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
+    <div class="stat-box"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
+    <div class="stat-box"><div class="label">Ombor qiymati</div><div class="value" id="statValue">0</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="list">Roʻyxat</button>
+    <button class="tab-btn" data-tab="add">➕ Yangi tovar</button>
+    <button class="tab-btn" data-tab="restock">📦 Yuk keldi</button>
+    <button class="tab-btn" data-tab="sale">🛒 Sotildi</button>
+    <button class="tab-btn" data-tab="expenses">💸 Rasxodlar</button>
+  </div>
+
+  <!-- Yangi tovar qo'shish -->
+  <div class="tab-panel" id="panel-add">
+    <div class="card">
+      <div class="card-title">Yangi tovar qoʻshish</div>
+      <div class="form-grid">
+        <div class="field"><label>Nomi</label><input id="addName" placeholder="Masalan: Choy Beta" /></div>
+        <div class="field"><label>Miqdori</label><input id="addQty" class="mf" inputmode="numeric" placeholder="0" /></div>
+        <div class="field"><label>Ulgurchi narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
+      </div>
+      <button class="btn btn-primary" id="addBtn">Qoʻshish</button>
+    </div>
+  </div>
+
+  <!-- Yuk keldi -->
+  <div class="tab-panel" id="panel-restock">
+    <div class="card">
+      <div class="card-title">Yuk keldi — miqdorga qoʻshish</div>
+      <div class="form-grid">
+        <div class="field" style="grid-column: span 2;">
+          <label>Tovarni tanlang</label>
+          <select id="restockSelect"></select>
+        </div>
+        <div class="field"><label>Qoʻshiladigan miqdor</label><input id="restockQty" class="mf" inputmode="numeric" placeholder="0" /></div>
+      </div>
+      <button class="btn btn-primary" id="restockBtn">Qoʻshib qoʻyish</button>
+    </div>
+  </div>
+
+  <!-- Sotildi -->
+  <div class="tab-panel" id="panel-sale">
+    <div class="card">
+      <div class="card-title">Sotildi — miqdordan ayirish</div>
+      <div class="form-grid">
+        <div class="field" style="grid-column: span 2;">
+          <label>Tovarni tanlang</label>
+          <select id="saleSelect"></select>
+        </div>
+        <div class="field"><label>Sotilgan miqdor</label><input id="saleQty" class="mf" inputmode="numeric" placeholder="0" /></div>
+      </div>
+      <button class="btn btn-primary" id="saleBtn">Ayirib qoʻyish</button>
+    </div>
+  </div>
+
+  <!-- Rasxodlar -->
+  <div class="tab-panel" id="panel-expenses">
+    <div class="card">
+      <div class="card-title">Yangi rasxod qoʻshish</div>
+      <div class="form-grid">
+        <div class="field"><label>Sarlavha</label><input id="expTitle" placeholder="Masalan: Svet, Ijara..." /></div>
+        <div class="field"><label>Summa</label><input id="expAmount" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Sana</label><input id="expDate" type="date" /></div>
+      </div>
+      <button class="btn btn-primary" id="expAddBtn">Qoʻshish</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box" style="flex:1 1 100%;">
+        <div class="label" id="expMonthLabel">Shu oy rasxodi</div>
+        <div class="value" id="expMonthTotal">0</div>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-bottom:14px; grid-template-columns: 1fr;">
+      <div class="field">
+        <label>Oyni tanlang</label>
+        <select id="expMonthSelect"></select>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Sarlavha</th><th>Summa</th><th>Sana</th><th>Kim qoʻshgan</th><th></th></tr>
+      </thead>
+      <tbody id="expTableBody"></tbody>
+    </table>
+    <div id="expCardList"></div>
+    <div id="expEmptyState" class="empty" style="display:none;"></div>
+  </div>
+
+  <!-- Ro'yxat -->
+  <div class="tab-panel active" id="panel-list">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" placeholder="Tovarni qidirish..." />
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nomi</th><th>Miqdor</th><th>Ulgurchi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+
+    <div id="cardList"></div>
+    <div id="emptyState" class="empty" style="display:none;"></div>
+  </div>
+
+</div>
+<script>
+  // ======================================================================
+  // BU YERGA OʻZ FIREBASE CONFIG'INGIZNI QOʻYING
+  // ======================================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBBCv6UZiq_RfbIY_XUQTh_41TwvLxNK8o",
+    authDomain: "ultra-mobile-a6c80.firebaseapp.com",
+    databaseURL: "https://ultra-mobile-a6c80-default-rtdb.firebaseio.com",
+    projectId: "ultra-mobile-a6c80",
+    storageBucket: "ultra-mobile-a6c80.firebasestorage.app",
+    messagingSenderId: "645825940409",
+    appId: "1:645825940409:web:b181eae5270eab101d8468"
+  };
+  // ======================================================================
+
+  const isConfigured = !Object.values(firebaseConfig).some(v => String(v).startsWith("BU_YERGA"));
+  let itemsRef = null;
+  let expensesRef = null; // tovarlardan mustaqil, alohida "expenses" bo'limi
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    itemsRef = firebase.database().ref("items");
+    expensesRef = firebase.database().ref("expenses");
+  } else {
+    document.getElementById("configWarning").style.display = "block";
+  }
+
+  let items = {};
+  let expenses = {};
+  let staffName = sessionStorage.getItem("staffName") || "";
+
+  const el = (id) => document.getElementById(id);
+  const fmt = (n) => new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " soʻm";
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const nowStr = () => new Date().toLocaleString("uz-UZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  function showError(msg) {
+    const b = el("errorBanner");
+    b.textContent = msg; b.style.display = msg ? "block" : "none";
+  }
+  function showStatus(msg) {
+    const b = el("statusBanner");
+    b.textContent = msg; b.style.display = msg ? "block" : "none";
+    if (msg) setTimeout(() => { b.style.display = "none"; }, 2000);
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  // ---- Kirish kodi (qurilmaga xos, localStorage orqali eslab qolinadi) ----
+  const ACCESS_CODE = "3VbrQR3d";
+  const authorized = localStorage.getItem("dokon_authorized") === "yes";
+
+  function afterAuth() {
+    // Auth o'tgandan keyin ism oynasini tekshiramiz
+    if (staffName) {
+      el("nameModal").style.display = "none";
+      el("staffLabel").textContent = "👤 " + staffName;
+    } else {
+      el("nameModal").style.display = "flex";
+    }
+  }
+
+  if (authorized) {
+    el("codeModal").style.display = "none";
+    afterAuth();
+  } else {
+    el("codeModal").style.display = "flex";
+    el("nameModal").style.display = "none";
+  }
+
+  el("codeSubmit").addEventListener("click", submitCode);
+  el("accessCodeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") submitCode(); });
+
+  function submitCode() {
+    const val = el("accessCodeInput").value;
+    if (val === ACCESS_CODE) {
+      localStorage.setItem("dokon_authorized", "yes");
+      el("codeModal").style.display = "none";
+      el("codeError").style.display = "none";
+      afterAuth();
+    } else {
+      el("codeError").style.display = "block";
+    }
+  }
+
+  // ---- Ism sessiyasi ----
+  el("staffNameSave").addEventListener("click", () => {
+    const v = el("staffNameInput").value.trim();
+    if (!v) return;
+    staffName = v;
+    sessionStorage.setItem("staffName", v);
+    el("nameModal").style.display = "none";
+    el("staffLabel").textContent = "👤 " + staffName;
+  });
+
+  // ---- Dark mode ----
+  const savedTheme = localStorage.getItem("theme") || "light";
+  if (savedTheme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  el("themeToggle").textContent = savedTheme === "dark" ? "☀️" : "🌙";
+  el("themeToggle").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    const next = cur === "dark" ? "light" : "dark";
+    if (next === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    localStorage.setItem("theme", next);
+    el("themeToggle").textContent = next === "dark" ? "☀️" : "🌙";
+  });
+
+  // ---- Tabs ----
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      el("panel-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ---- Firebase listener ----
+  if (itemsRef) {
+    itemsRef.on("value", (snap) => {
+      items = snap.val() || {};
+      renderAll();
+    }, (err) => showError("Ulanishda xatolik: " + err.message));
+  }
+  if (expensesRef) {
+    expensesRef.on("value", (snap) => {
+      expenses = snap.val() || {};
+      renderExpenses();
+    }, (err) => showError("Ulanishda xatolik: " + err.message));
+  }
+
+  function renderAll() {
+    renderStats();
+    renderSelects();
+    renderList();
+  }
+
+  function renderStats() {
+    const list = Object.values(items);
+    const total = list.length;
+    const ok = list.filter((it) => it.qty > 0).length;
+    const out = total - ok;
+    const value = list.reduce((sum, it) => sum + (it.qty || 0) * (it.wholesale || 0), 0);
+    el("statTotal").textContent = total;
+    el("statOk").textContent = ok;
+    el("statOut").textContent = out;
+    el("statValue").textContent = fmt(value);
+  }
+
+  function renderSelects() {
+    const opts = Object.entries(items)
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, "uz"))
+      .map(([id, it]) => `<option value="${id}">${escapeHtml(it.name)} (bor: ${it.qty})</option>`)
+      .join("");
+    const placeholder = `<option value="">— tanlang —</option>`;
+    el("restockSelect").innerHTML = placeholder + opts;
+    el("saleSelect").innerHTML = placeholder + opts;
+  }
+
+  let editId = null;
+
+  function renderList() {
+    const query = el("searchInput").value.trim().toLowerCase();
+    const list = Object.entries(items)
+      .map(([id, it]) => ({ id, ...it }))
+      .filter((it) => it.name.toLowerCase().includes(query))
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    const empty = el("emptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = Object.keys(items).length === 0 ? "Hali tovar qoʻshilmagan." : "Hech narsa topilmadi.";
+      el("tableBody").innerHTML = "";
+      el("cardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    el("tableBody").innerHTML = list.map((it) => rowHtml(it)).join("");
+    el("cardList").innerHTML = list.map((it) => cardHtml(it)).join("");
+  }
+
+  function rowHtml(it) {
+    if (editId === it.id) return editRowHtml(it, "tr", 7);
+    const inStock = it.qty > 0;
+    return `
+      <tr data-id="${it.id}">
+        <td>${escapeHtml(it.name)}</td>
+        <td class="mf">${it.qty}</td>
+        <td class="mf">${fmt(it.wholesale)}</td>
+        <td class="mf">${fmt(it.retail)}</td>
+        <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span></td>
+        <td>
+          <div>${escapeHtml(it.lastBy || "—")}</div>
+          <div class="meta-line">${it.updatedAt ? new Date(it.updatedAt).toLocaleString("uz-UZ", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</div>
+        </td>
+        <td>
+          <button class="icon-btn start-edit" data-id="${it.id}">✎</button>
+          <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
+        </td>
+      </tr>`;
+  }
+
+  function cardHtml(it) {
+    if (editId === it.id) return editRowHtml(it, "div", null);
+    const inStock = it.qty > 0;
+    return `
+      <div class="item-card" data-id="${it.id}">
+        <div class="row1">
+          <div class="name">${escapeHtml(it.name)}</div>
+          <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
+        </div>
+        <div class="prices">Miqdor: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
+        <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? new Date(it.updatedAt).toLocaleString("uz-UZ", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</div>
+        <div class="actions">
+          <button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
+          <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
+        </div>
+      </div>`;
+  }
+
+  function editRowHtml(it, tag, colspan) {
+    const inner = `
+      <input class="edit-name" value="${escapeHtml(it.name)}" placeholder="Nomi" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Miqdor" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Ulgurchi" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
+      <button class="btn btn-primary save-edit" data-id="${it.id}" style="margin-top:0;">Saqlash</button>
+      <button class="btn btn-ghost cancel-edit" style="margin-top:0;">Bekor qilish</button>`;
+    if (tag === "tr") return `<tr data-id="${it.id}"><td colspan="${colspan}" style="padding:12px;">${inner}</td></tr>`;
+    return `<div class="item-card" data-id="${it.id}">${inner}</div>`;
+  }
+
+  // ---- Add item ----
+  el("addBtn").addEventListener("click", () => {
+    if (!itemsRef) { showError("Firebase ulanmagan."); return; }
+    const name = el("addName").value.trim();
+    const qty = parseInt(el("addQty").value, 10);
+    const wholesale = parseFloat(el("addWholesale").value);
+    const retail = parseFloat(el("addRetail").value);
+    if (!name) return showError("Tovar nomini kiriting.");
+    if (isNaN(qty) || qty < 0) return showError("Miqdorni toʻgʻri kiriting.");
+    if (isNaN(wholesale) || wholesale < 0) return showError("Ulgurchi narxni toʻgʻri kiriting.");
+    if (isNaN(retail) || retail < 0) return showError("Dona narxni toʻgʻri kiriting.");
+    showError("");
+
+    const id = uid();
+    itemsRef.child(id).set({
+      name, qty, wholesale, retail,
+      lastBy: staffName || "Nomaʼlum", updatedAt: Date.now(), createdAt: Date.now()
+    }).then(() => {
+      el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addRetail").value = "";
+      showStatus("Qoʻshildi ✓");
+    }).catch((e) => showError(e.message));
+  });
+
+  // ---- Restock (yuk keldi) ----
+  el("restockBtn").addEventListener("click", () => {
+    const id = el("restockSelect").value;
+    const addQty = parseInt(el("restockQty").value, 10);
+    if (!id) return showError("Tovarni tanlang.");
+    if (isNaN(addQty) || addQty <= 0) return showError("Miqdorni toʻgʻri kiriting.");
+    showError("");
+    const cur = items[id];
+    itemsRef.child(id).update({
+      qty: (cur.qty || 0) + addQty, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+    }).then(() => {
+      el("restockQty").value = "";
+      showStatus(`+${addQty} qoʻshildi ✓`);
+    }).catch((e) => showError(e.message));
+  });
+
+  // ---- Sale (sotildi) ----
+  el("saleBtn").addEventListener("click", () => {
+    const id = el("saleSelect").value;
+    const subQty = parseInt(el("saleQty").value, 10);
+    if (!id) return showError("Tovarni tanlang.");
+    if (isNaN(subQty) || subQty <= 0) return showError("Miqdorni toʻgʻri kiriting.");
+    const cur = items[id];
+    if (subQty > (cur.qty || 0)) return showError(`Omborda faqat ${cur.qty} dona bor.`);
+    showError("");
+    itemsRef.child(id).update({
+      qty: cur.qty - subQty, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+    }).then(() => {
+      el("saleQty").value = "";
+      showStatus(`${subQty} dona sotildi ✓`);
+    }).catch((e) => showError(e.message));
+  });
+
+  // ---- Delegated list actions (table + cards) ----
+  function handleListClick(e) {
+    const t = e.target.closest("button");
+    if (!t) return;
+    const row = t.closest("[data-id]");
+    const id = row ? row.dataset.id : t.dataset.id;
+
+    if (t.classList.contains("start-edit")) { editId = id; renderList(); }
+    else if (t.classList.contains("cancel-edit")) { editId = null; renderList(); }
+    else if (t.classList.contains("delete-item")) {
+      if (confirm("Ushbu tovarni oʻchirmoqchimisiz?")) {
+        itemsRef.child(id).remove().catch((e) => showError(e.message));
+      }
+    } else if (t.classList.contains("save-edit")) {
+      const scope = row;
+      const name = scope.querySelector(".edit-name").value.trim();
+      const qty = parseInt(scope.querySelector(".edit-qty").value, 10);
+      const wholesale = parseFloat(scope.querySelector(".edit-wholesale").value);
+      const retail = parseFloat(scope.querySelector(".edit-retail").value);
+      if (!name || isNaN(qty) || qty < 0 || isNaN(wholesale) || isNaN(retail)) {
+        showError("Maʼlumotlarni toʻgʻri kiriting."); return;
+      }
+      showError("");
+      itemsRef.child(id).update({
+        name, qty, wholesale, retail, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+      }).then(() => { editId = null; }).catch((e) => showError(e.message));
+    }
+  }
+  el("tableBody").addEventListener("click", handleListClick);
+  el("cardList").addEventListener("click", handleListClick);
+
+  el("searchInput").addEventListener("input", renderList);
+
+  // ======================================================================
+  // RASXODLAR — tovarlardan butunlay alohida ma'lumot (Firebase "expenses")
+  // ======================================================================
+  el("expDate").valueAsDate = new Date();
+  let selectedMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+  function monthKey(ts) {
+    return new Date(ts).toISOString().slice(0, 7);
+  }
+  function monthLabelUz(key) {
+    const [y, m] = key.split("-");
+    const names = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+    return `${names[parseInt(m,10)-1]} ${y}`;
+  }
+
+  function renderExpenses() {
+    // oy tanlash ro'yxatini to'ldirish (mavjud rasxodlar oylaridan)
+    const allMonths = Array.from(new Set(Object.values(expenses).map((e) => monthKey(e.date)))).sort().reverse();
+    if (!allMonths.includes(selectedMonth)) allMonths.unshift(selectedMonth);
+    const prevSelected = el("expMonthSelect").value || selectedMonth;
+    el("expMonthSelect").innerHTML = allMonths.map((m) =>
+      `<option value="${m}" ${m === prevSelected ? "selected" : ""}>${monthLabelUz(m)}</option>`
+    ).join("");
+    selectedMonth = el("expMonthSelect").value;
+    el("expMonthLabel").textContent = monthLabelUz(selectedMonth) + " rasxodi";
+
+    const list = Object.entries(expenses)
+      .map(([id, e]) => ({ id, ...e }))
+      .filter((e) => monthKey(e.date) === selectedMonth)
+      .sort((a, b) => b.date - a.date);
+
+    const total = list.reduce((sum, e) => sum + (e.amount || 0), 0);
+    el("expMonthTotal").textContent = fmt(total);
+
+    const empty = el("expEmptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = "Bu oyda rasxod kiritilmagan.";
+      el("expTableBody").innerHTML = "";
+      el("expCardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    el("expTableBody").innerHTML = list.map((e) => `
+      <tr data-id="${e.id}">
+        <td>${escapeHtml(e.title)}</td>
+        <td class="mf exp-amt">${fmt(e.amount)}</td>
+        <td>${new Date(e.date).toLocaleDateString("uz-UZ")}</td>
+        <td>${escapeHtml(e.addedBy || "—")}</td>
+        <td><button class="icon-btn del exp-delete" data-id="${e.id}">🗑</button></td>
+      </tr>`).join("");
+
+    el("expCardList").innerHTML = list.map((e) => `
+      <div class="item-card" data-id="${e.id}">
+        <div class="row1">
+          <div class="name">${escapeHtml(e.title)}</div>
+          <span class="mf exp-amt">${fmt(e.amount)}</span>
+        </div>
+        <div class="meta-line">${new Date(e.date).toLocaleDateString("uz-UZ")} · ${escapeHtml(e.addedBy || "—")}</div>
+        <div class="actions">
+          <button class="icon-btn del exp-delete" data-id="${e.id}">🗑 Oʻchirish</button>
+        </div>
+      </div>`).join("");
+  }
+
+  el("expMonthSelect").addEventListener("change", () => {
+    selectedMonth = el("expMonthSelect").value;
+    renderExpenses();
+  });
+
+  el("expAddBtn").addEventListener("click", () => {
+    if (!expensesRef) { showError("Firebase ulanmagan."); return; }
+    const title = el("expTitle").value.trim();
+    const amount = parseFloat(el("expAmount").value);
+    const dateVal = el("expDate").value;
+    if (!title) return showError("Rasxod sarlavhasini kiriting.");
+    if (isNaN(amount) || amount <= 0) return showError("Summani toʻgʻri kiriting.");
+    if (!dateVal) return showError("Sanani tanlang.");
+    showError("");
+
+    const id = uid();
+    const ts = new Date(dateVal + "T12:00:00").getTime();
+    expensesRef.child(id).set({
+      title, amount, date: ts, addedBy: staffName || "Nomaʼlum", createdAt: Date.now()
+    }).then(() => {
+      el("expTitle").value = ""; el("expAmount").value = "";
+      showStatus("Rasxod qoʻshildi ✓");
+    }).catch((e) => showError(e.message));
+  });
+
+  function handleExpenseClick(e) {
+    const t = e.target.closest("button");
+    if (!t || !t.classList.contains("exp-delete")) return;
+    const id = t.closest("[data-id]").dataset.id;
+    if (confirm("Ushbu rasxodni oʻchirmoqchimisiz?")) {
+      expensesRef.child(id).remove().catch((err) => showError(err.message));
+    }
+  }
+  el("expTableBody").addEventListener("click", handleExpenseClick);
+  el("expCardList").addEventListener("click", handleExpenseClick);
+
+  renderAll();
+  renderExpenses();
+</script>
+
+</body>
+</html>
