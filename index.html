@@ -656,7 +656,7 @@
       <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Miqdor" style="margin-bottom:4px;width:100%;" />
       <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Ulgurchi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
-      <button class="btn btn-primary save-edit" data-id="${it.id}" style="margin-top:0;">Saqlash</button>
+      <button class="btn btn-primary save-edit" style="margin-top:0;">Saqlash</button>
       <button class="btn btn-ghost cancel-edit" style="margin-top:0;">Bekor qilish</button>`;
     if (tag === "tr") return `<tr data-id="${it.id}"><td colspan="${colspan}" style="padding:12px;">${inner}</td></tr>`;
     return `<div class="item-card" data-id="${it.id}">${inner}</div>`;
