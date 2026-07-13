@@ -285,6 +285,29 @@
       </div>
       <button class="btn btn-primary" id="saleBtn">Ayirib qoʻyish</button>
     </div>
+
+    <div class="stats-row">
+      <div class="stat-box" style="flex:1 1 100%;">
+        <div class="label" id="saleMonthLabel">Shu oy savdosi</div>
+        <div class="value" id="saleMonthTotal" style="color: var(--green);">0</div>
+      </div>
+    </div>
+
+    <div class="form-grid" style="margin-bottom:14px; grid-template-columns: 1fr;">
+      <div class="field">
+        <label>Oyni tanlang</label>
+        <select id="saleMonthSelect"></select>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Tovar</th><th>Miqdor</th><th>Narxi</th><th>Jami</th><th>Sana</th><th>Kim sotgan</th></tr>
+      </thead>
+      <tbody id="saleTableBody"></tbody>
+    </table>
+    <div id="saleCardList"></div>
+    <div id="saleEmptyState" class="empty" style="display:none;"></div>
   </div>
 
   <!-- Rasxodlar -->
@@ -361,23 +384,38 @@
 
   const isConfigured = !Object.values(firebaseConfig).some(v => String(v).startsWith("BU_YERGA"));
   let itemsRef = null;
-  let expensesRef = null; // tovarlardan mustaqil, alohida "expenses" bo'limi
+  let expensesRef = null;
+  let salesRef = null; // sotuvlar tarixi - alohida "sales" bo'limi
   if (isConfigured) {
     firebase.initializeApp(firebaseConfig);
     itemsRef = firebase.database().ref("items");
     expensesRef = firebase.database().ref("expenses");
+    salesRef = firebase.database().ref("sales");
   } else {
     document.getElementById("configWarning").style.display = "block";
   }
 
   let items = {};
   let expenses = {};
-  let staffName = sessionStorage.getItem("staffName") || "";
+  let sales = {};
+  let staffName = localStorage.getItem("staffName") || "";
 
   const el = (id) => document.getElementById(id);
   const fmt = (n) => new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " soʻm";
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const nowStr = () => new Date().toLocaleString("uz-UZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const WEEKDAYS_UZ = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    const dateStr = d.toLocaleDateString("uz-UZ");
+    return `${dateStr}, ${WEEKDAYS_UZ[d.getDay()]}`;
+  }
+  function fmtDateTime(ts) {
+    const d = new Date(ts);
+    const dateStr = d.toLocaleDateString("uz-UZ");
+    const timeStr = d.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+    return `${dateStr}, ${WEEKDAYS_UZ[d.getDay()]} · ${timeStr}`;
+  }
 
   function showError(msg) {
     const b = el("errorBanner");
@@ -434,7 +472,7 @@
     const v = el("staffNameInput").value.trim();
     if (!v) return;
     staffName = v;
-    sessionStorage.setItem("staffName", v);
+    localStorage.setItem("staffName", v);
     el("nameModal").style.display = "none";
     el("staffLabel").textContent = "👤 " + staffName;
   });
@@ -473,6 +511,12 @@
     expensesRef.on("value", (snap) => {
       expenses = snap.val() || {};
       renderExpenses();
+    }, (err) => showError("Ulanishda xatolik: " + err.message));
+  }
+  if (salesRef) {
+    salesRef.on("value", (snap) => {
+      sales = snap.val() || {};
+      renderSales();
     }, (err) => showError("Ulanishda xatolik: " + err.message));
   }
 
@@ -539,7 +583,7 @@
         <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span></td>
         <td>
           <div>${escapeHtml(it.lastBy || "—")}</div>
-          <div class="meta-line">${it.updatedAt ? new Date(it.updatedAt).toLocaleString("uz-UZ", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</div>
+          <div class="meta-line">${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         </td>
         <td>
           <button class="icon-btn start-edit" data-id="${it.id}">✎</button>
@@ -558,7 +602,7 @@
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
         <div class="prices">Miqdor: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
-        <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? new Date(it.updatedAt).toLocaleString("uz-UZ", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</div>
+        <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         <div class="actions">
           <button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
           <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
@@ -629,6 +673,18 @@
     itemsRef.child(id).update({
       qty: cur.qty - subQty, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
     }).then(() => {
+      // Sotuvlar tarixiga alohida yozuv qo'shamiz (tovarlar ma'lumotidan mustaqil)
+      if (salesRef) {
+        const saleId = uid();
+        salesRef.child(saleId).set({
+          itemName: cur.name,
+          qty: subQty,
+          unitPrice: cur.retail,
+          total: subQty * cur.retail,
+          date: Date.now(),
+          addedBy: staffName || "Nomaʼlum"
+        }).catch((e) => showError("Sotuv tarixini yozishda xatolik: " + e.message));
+      }
       el("saleQty").value = "";
       showStatus(`${subQty} dona sotildi ✓`);
     }).catch((e) => showError(e.message));
@@ -715,7 +771,7 @@
       <tr data-id="${e.id}">
         <td>${escapeHtml(e.title)}</td>
         <td class="mf exp-amt">${fmt(e.amount)}</td>
-        <td>${new Date(e.date).toLocaleDateString("uz-UZ")}</td>
+        <td>${fmtDate(e.date)}</td>
         <td>${escapeHtml(e.addedBy || "—")}</td>
         <td><button class="icon-btn del exp-delete" data-id="${e.id}">🗑</button></td>
       </tr>`).join("");
@@ -726,7 +782,7 @@
           <div class="name">${escapeHtml(e.title)}</div>
           <span class="mf exp-amt">${fmt(e.amount)}</span>
         </div>
-        <div class="meta-line">${new Date(e.date).toLocaleDateString("uz-UZ")} · ${escapeHtml(e.addedBy || "—")}</div>
+        <div class="meta-line">${fmtDate(e.date)} · ${escapeHtml(e.addedBy || "—")}</div>
         <div class="actions">
           <button class="icon-btn del exp-delete" data-id="${e.id}">🗑 Oʻchirish</button>
         </div>
@@ -769,8 +825,67 @@
   el("expTableBody").addEventListener("click", handleExpenseClick);
   el("expCardList").addEventListener("click", handleExpenseClick);
 
+  // ======================================================================
+  // SOTUVLAR TARIXI — tovarlar va rasxodlardan mustaqil (Firebase "sales")
+  // ======================================================================
+  let selectedSaleMonth = new Date().toISOString().slice(0, 7);
+
+  function renderSales() {
+    const allMonths = Array.from(new Set(Object.values(sales).map((s) => monthKey(s.date)))).sort().reverse();
+    if (!allMonths.includes(selectedSaleMonth)) allMonths.unshift(selectedSaleMonth);
+    const prevSelected = el("saleMonthSelect").value || selectedSaleMonth;
+    el("saleMonthSelect").innerHTML = allMonths.map((m) =>
+      `<option value="${m}" ${m === prevSelected ? "selected" : ""}>${monthLabelUz(m)}</option>`
+    ).join("");
+    selectedSaleMonth = el("saleMonthSelect").value;
+    el("saleMonthLabel").textContent = monthLabelUz(selectedSaleMonth) + " savdosi";
+
+    const list = Object.entries(sales)
+      .map(([id, s]) => ({ id, ...s }))
+      .filter((s) => monthKey(s.date) === selectedSaleMonth)
+      .sort((a, b) => b.date - a.date);
+
+    const total = list.reduce((sum, s) => sum + (s.total || 0), 0);
+    el("saleMonthTotal").textContent = fmt(total);
+
+    const empty = el("saleEmptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = "Bu oyda sotuv qilinmagan.";
+      el("saleTableBody").innerHTML = "";
+      el("saleCardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    el("saleTableBody").innerHTML = list.map((s) => `
+      <tr>
+        <td>${escapeHtml(s.itemName)}</td>
+        <td class="mf">${s.qty}</td>
+        <td class="mf">${fmt(s.unitPrice)}</td>
+        <td class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</td>
+        <td>${fmtDate(s.date)}</td>
+        <td>${escapeHtml(s.addedBy || "—")}</td>
+      </tr>`).join("");
+
+    el("saleCardList").innerHTML = list.map((s) => `
+      <div class="item-card">
+        <div class="row1">
+          <div class="name">${escapeHtml(s.itemName)} × ${s.qty}</div>
+          <span class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</span>
+        </div>
+        <div class="meta-line">${fmtDate(s.date)} · ${escapeHtml(s.addedBy || "—")}</div>
+      </div>`).join("");
+  }
+
+  el("saleMonthSelect").addEventListener("change", () => {
+    selectedSaleMonth = el("saleMonthSelect").value;
+    renderSales();
+  });
+
   renderAll();
   renderExpenses();
+  renderSales();
 </script>
 
 </body>
