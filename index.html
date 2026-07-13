@@ -80,6 +80,9 @@
   }
   .stat-box .label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.5px; }
   .stat-box .value { font-size: 21px; font-weight: 700; margin-top: 4px; font-family: 'JetBrains Mono', monospace; color: var(--blue-stat); }
+  .filter-box { cursor: pointer; user-select: none; transition: border-color .15s, transform .1s; }
+  .filter-box:hover { transform: translateY(-1px); }
+  .filter-box.active-filter { border: 2px solid var(--accent); }
 
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .tab-btn {
@@ -231,9 +234,9 @@
   <div id="statusBanner" class="banner status"></div>
 
   <div class="stats-row">
-    <div class="stat-box"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
-    <div class="stat-box"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
-    <div class="stat-box"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
+    <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
+    <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
+    <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
     <div class="stat-box"><div class="label">Ombor qiymati</div><div class="value" id="statValue">0</div></div>
   </div>
 
@@ -578,6 +581,7 @@
   }
 
   let editId = null;
+  let stockFilter = "all"; // "all" | "instock" | "outstock"
   let selectMode = false;
   let selectedIds = new Set();
   let undoStack = []; // har biri: [{id, data}, ...]
@@ -589,6 +593,11 @@
     const list = Object.entries(items)
       .map(([id, it]) => ({ id, ...it }))
       .filter((it) => it.name.toLowerCase().includes(query))
+      .filter((it) => {
+        if (stockFilter === "instock") return it.qty > 0;
+        if (stockFilter === "outstock") return it.qty <= 0;
+        return true;
+      })
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     const empty = el("emptyState");
@@ -886,6 +895,27 @@
 
   el("searchInput").addEventListener("input", renderList);
 
+  // ---- Statistika bloklari orqali filtrlash (Jami/Bor/Tugagan) ----
+  function applyStockFilter(f) {
+    stockFilter = (stockFilter === f) ? "all" : f; // qayta bossa - filtr bekor bo'ladi
+    document.querySelectorAll(".filter-box").forEach((box) => box.classList.remove("active-filter"));
+    if (stockFilter !== "all") {
+      const activeBox = document.querySelector(`.filter-box[data-filter="${stockFilter}"]`);
+      if (activeBox) activeBox.classList.add("active-filter");
+    } else {
+      el("filterAll").classList.add("active-filter");
+    }
+    // Ro'yxat tab hali faol emasligi mumkin - avval o'tkazamiz
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    document.querySelector('.tab-btn[data-tab="list"]').classList.add("active");
+    el("panel-list").classList.add("active");
+    renderList();
+  }
+  el("filterAll").addEventListener("click", () => applyStockFilter("all"));
+  el("filterOk").addEventListener("click", () => applyStockFilter("instock"));
+  el("filterOut").addEventListener("click", () => applyStockFilter("outstock"));
+
   // ======================================================================
   // RASXODLAR — tovarlardan butunlay alohida ma'lumot (Firebase "expenses")
   // ======================================================================
@@ -1049,6 +1079,7 @@
   renderAll();
   renderExpenses();
   renderSales();
+  el("filterAll").classList.add("active-filter");
 </script>
 
 </body>
