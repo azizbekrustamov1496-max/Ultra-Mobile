@@ -275,15 +275,10 @@
   <!-- Sotildi -->
   <div class="tab-panel" id="panel-sale">
     <div class="card">
-      <div class="card-title">Sotildi — miqdordan ayirish</div>
-      <div class="form-grid">
-        <div class="field" style="grid-column: span 2;">
-          <label>Tovarni tanlang</label>
-          <select id="saleSelect"></select>
-        </div>
-        <div class="field"><label>Sotilgan miqdor</label><input id="saleQty" class="mf" inputmode="numeric" placeholder="0" /></div>
-      </div>
-      <button class="btn btn-primary" id="saleBtn">Ayirib qoʻyish</button>
+      <div class="card-title">Qanday sotish kerak?</div>
+      <p style="font-size:13px; color:var(--text-mute); margin:0;">
+        <strong>"Roʻyxat"</strong> boʻlimiga oʻting, kerakli tovar yonidagi <strong>🛒 Sotish</strong> tugmasini bosing — miqdor va narxni shu yerda soʻraydi.
+      </p>
     </div>
 
     <div class="stats-row">
@@ -366,6 +361,27 @@
     <div id="emptyState" class="empty" style="display:none;"></div>
   </div>
 
+</div>
+
+<!-- Sotish oynasi -->
+<div class="modal-overlay" id="sellModal" style="display:none;">
+  <div class="modal-box">
+    <h2 id="sellModalTitle">Sotish</h2>
+    <p id="sellModalStock" style="margin-bottom:14px;"></p>
+    <div class="field" style="margin-bottom:10px;">
+      <label>Nechta sotasiz?</label>
+      <input id="sellQtyInput" class="mf" inputmode="numeric" placeholder="Miqdor" />
+    </div>
+    <div class="field" style="margin-bottom:6px;">
+      <label>Qanchaga sotasiz? (bir donasi)</label>
+      <input id="sellPriceInput" class="mf" inputmode="decimal" placeholder="Narxi" />
+    </div>
+    <div id="sellModalError" style="color:var(--bad-text); font-size:12px; margin-bottom:10px; display:none;"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" id="sellModalConfirm" style="flex:1;">Sotish</button>
+      <button class="btn btn-ghost" id="sellModalCancel" style="flex:1;">Bekor qilish</button>
+    </div>
+  </div>
 </div>
 <script>
   // ======================================================================
@@ -545,7 +561,6 @@
       .join("");
     const placeholder = `<option value="">— tanlang —</option>`;
     el("restockSelect").innerHTML = placeholder + opts;
-    el("saleSelect").innerHTML = placeholder + opts;
   }
 
   let editId = null;
@@ -588,6 +603,7 @@
         <td>
           <button class="icon-btn start-edit" data-id="${it.id}">✎</button>
           <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
+          <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>
         </td>
       </tr>`;
   }
@@ -606,6 +622,7 @@
         <div class="actions">
           <button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
           <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
+          <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>
         </div>
       </div>`;
   }
@@ -661,33 +678,54 @@
     }).catch((e) => showError(e.message));
   });
 
-  // ---- Sale (sotildi) ----
-  el("saleBtn").addEventListener("click", () => {
-    const id = el("saleSelect").value;
-    const subQty = parseInt(el("saleQty").value, 10);
-    if (!id) return showError("Tovarni tanlang.");
-    if (isNaN(subQty) || subQty <= 0) return showError("Miqdorni toʻgʻri kiriting.");
-    const cur = items[id];
-    if (subQty > (cur.qty || 0)) return showError(`Omborda faqat ${cur.qty} dona bor.`);
-    showError("");
-    itemsRef.child(id).update({
-      qty: cur.qty - subQty, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+  // ---- Sotish oynasi (modal) ----
+  let sellTargetId = null;
+
+  function openSellModal(id) {
+    const it = items[id];
+    if (!it) return;
+    sellTargetId = id;
+    el("sellModalTitle").textContent = "Sotish: " + it.name;
+    el("sellModalStock").textContent = `Omborda: ${it.qty} dona`;
+    el("sellQtyInput").value = "";
+    el("sellPriceInput").value = it.retail;
+    el("sellModalError").style.display = "none";
+    el("sellModal").style.display = "flex";
+    setTimeout(() => el("sellQtyInput").focus(), 50);
+  }
+  function closeSellModal() {
+    el("sellModal").style.display = "none";
+    sellTargetId = null;
+  }
+
+  el("sellModalCancel").addEventListener("click", closeSellModal);
+
+  el("sellModalConfirm").addEventListener("click", () => {
+    if (!sellTargetId) return;
+    const it = items[sellTargetId];
+    const qty = parseInt(el("sellQtyInput").value, 10);
+    const price = parseFloat(el("sellPriceInput").value);
+    const errBox = el("sellModalError");
+
+    if (!it) { errBox.textContent = "Tovar topilmadi."; errBox.style.display = "block"; return; }
+    if (isNaN(qty) || qty <= 0) { errBox.textContent = "Miqdorni toʻgʻri kiriting."; errBox.style.display = "block"; return; }
+    if (qty > (it.qty || 0)) { errBox.textContent = `Omborda faqat ${it.qty} dona bor.`; errBox.style.display = "block"; return; }
+    if (isNaN(price) || price <= 0) { errBox.textContent = "Narxni toʻgʻri kiriting."; errBox.style.display = "block"; return; }
+    errBox.style.display = "none";
+
+    itemsRef.child(sellTargetId).update({
+      qty: it.qty - qty, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
     }).then(() => {
-      // Sotuvlar tarixiga alohida yozuv qo'shamiz (tovarlar ma'lumotidan mustaqil)
       if (salesRef) {
         const saleId = uid();
         salesRef.child(saleId).set({
-          itemName: cur.name,
-          qty: subQty,
-          unitPrice: cur.retail,
-          total: subQty * cur.retail,
-          date: Date.now(),
-          addedBy: staffName || "Nomaʼlum"
+          itemName: it.name, qty, unitPrice: price, total: qty * price,
+          date: Date.now(), addedBy: staffName || "Nomaʼlum"
         }).catch((e) => showError("Sotuv tarixini yozishda xatolik: " + e.message));
       }
-      el("saleQty").value = "";
-      showStatus(`${subQty} dona sotildi ✓`);
-    }).catch((e) => showError(e.message));
+      showStatus(`${qty} dona "${it.name}" sotildi ✓`);
+      closeSellModal();
+    }).catch((e) => { errBox.textContent = e.message; errBox.style.display = "block"; });
   });
 
   // ---- Delegated list actions (table + cards) ----
@@ -698,6 +736,7 @@
     const id = row ? row.dataset.id : t.dataset.id;
 
     if (t.classList.contains("start-edit")) { editId = id; renderList(); }
+    else if (t.classList.contains("sell-btn")) { openSellModal(id); }
     else if (t.classList.contains("cancel-edit")) { editId = null; renderList(); }
     else if (t.classList.contains("delete-item")) {
       if (confirm("Ushbu tovarni oʻchirmoqchimisiz?")) {
