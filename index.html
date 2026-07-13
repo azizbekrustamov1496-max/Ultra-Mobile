@@ -138,6 +138,8 @@
   tbody td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--bg); }
+  tr.row-selected, .item-card.card-selected { background: var(--ok-bg) !important; }
+  .selectable-row, .item-card.selectable { cursor: pointer; }
   .badge {
     font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
     letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap;
@@ -343,10 +345,22 @@
 
   <!-- Ro'yxat -->
   <div class="tab-panel active" id="panel-list">
+    <div id="selectionToolbar" style="display:none; align-items:center; gap:10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+        <input type="checkbox" id="selectAllCheckbox" style="width:16px; height:16px;" />
+        Hammasini belgilash
+      </label>
+      <span id="selectionCount" class="mf" style="font-size:13px; color:var(--text-mute);">0 ta tanlandi</span>
+      <div style="flex:1;"></div>
+      <button class="btn btn-danger" id="bulkDeleteBtn" style="margin-top:0;">🗑 Oʻchirish</button>
+      <button class="btn btn-ghost" id="cancelSelectBtn" style="margin-top:0;">Bekor qilish</button>
+    </div>
+
     <div class="search-wrap">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input id="searchInput" placeholder="Tovarni qidirish..." />
     </div>
+    <div style="font-size:11px; color:var(--text-mute); margin:-8px 0 12px;">💡 Bir nechtasini tanlash uchun 🗑 belgisini bosib turing (~1 soniya)</div>
 
     <table>
       <thead>
@@ -564,6 +578,11 @@
   }
 
   let editId = null;
+  let selectMode = false;
+  let selectedIds = new Set();
+  let undoStack = []; // har biri: [{id, data}, ...]
+  let longPressTimer = null;
+  let longPressFired = false;
 
   function renderList() {
     const query = el("searchInput").value.trim().toLowerCase();
@@ -589,8 +608,14 @@
   function rowHtml(it) {
     if (editId === it.id) return editRowHtml(it, "tr", 7);
     const inStock = it.qty > 0;
+    const sel = selectedIds.has(it.id);
+    const actionsCell = selectMode
+      ? `<input type="checkbox" class="row-checkbox" data-id="${it.id}" ${sel ? "checked" : ""} style="width:18px;height:18px;" />`
+      : `<button class="icon-btn start-edit" data-id="${it.id}">✎</button>
+         <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
+         <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>`;
     return `
-      <tr data-id="${it.id}">
+      <tr data-id="${it.id}" class="${selectMode ? "selectable-row" : ""} ${sel ? "row-selected" : ""}">
         <td>${escapeHtml(it.name)}</td>
         <td class="mf">${it.qty}</td>
         <td class="mf">${fmt(it.wholesale)}</td>
@@ -600,30 +625,28 @@
           <div>${escapeHtml(it.lastBy || "—")}</div>
           <div class="meta-line">${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         </td>
-        <td>
-          <button class="icon-btn start-edit" data-id="${it.id}">✎</button>
-          <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
-          <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>
-        </td>
+        <td>${actionsCell}</td>
       </tr>`;
   }
 
   function cardHtml(it) {
     if (editId === it.id) return editRowHtml(it, "div", null);
     const inStock = it.qty > 0;
+    const sel = selectedIds.has(it.id);
+    const actions = selectMode
+      ? `<input type="checkbox" class="row-checkbox" data-id="${it.id}" ${sel ? "checked" : ""} style="width:18px;height:18px;" />`
+      : `<button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
+         <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
+         <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>`;
     return `
-      <div class="item-card" data-id="${it.id}">
+      <div class="item-card ${selectMode ? "selectable" : ""} ${sel ? "card-selected" : ""}" data-id="${it.id}">
         <div class="row1">
           <div class="name">${escapeHtml(it.name)}</div>
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
         <div class="prices">Miqdor: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
         <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
-        <div class="actions">
-          <button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
-          <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
-          <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>
-        </div>
+        <div class="actions">${actions}</div>
       </div>`;
   }
 
@@ -730,6 +753,19 @@
 
   // ---- Delegated list actions (table + cards) ----
   function handleListClick(e) {
+    const rowEl = e.target.closest("[data-id]");
+    const rowId = rowEl ? rowEl.dataset.id : null;
+
+    // Checkbox yoki qatorning o'zi bosilsa - tanlash rejimida shu qatorni belgilaydi/o'chiradi
+    if (selectMode && rowId && editId !== rowId) {
+      const isCheckbox = e.target.classList.contains("row-checkbox");
+      const isOtherButton = e.target.closest("button");
+      if (isCheckbox || !isOtherButton) {
+        toggleSelect(rowId);
+        return;
+      }
+    }
+
     const t = e.target.closest("button");
     if (!t) return;
     const row = t.closest("[data-id]");
@@ -739,7 +775,10 @@
     else if (t.classList.contains("sell-btn")) { openSellModal(id); }
     else if (t.classList.contains("cancel-edit")) { editId = null; renderList(); }
     else if (t.classList.contains("delete-item")) {
+      if (longPressFired) { longPressFired = false; return; }
       if (confirm("Ushbu tovarni oʻchirmoqchimisiz?")) {
+        const data = items[id];
+        if (data) pushUndo([{ id, data }]);
         itemsRef.child(id).remove().catch((e) => showError(e.message));
       }
     } else if (t.classList.contains("save-edit")) {
@@ -759,6 +798,91 @@
   }
   el("tableBody").addEventListener("click", handleListClick);
   el("cardList").addEventListener("click", handleListClick);
+
+  // ---- Tanlash rejimi (bir nechtasini o'chirish) ----
+  function enterSelectMode(firstId) {
+    selectMode = true;
+    selectedIds.clear();
+    if (firstId) selectedIds.add(firstId);
+    el("selectionToolbar").style.display = "flex";
+    updateSelectionToolbar();
+    renderList();
+  }
+  function exitSelectMode() {
+    selectMode = false;
+    selectedIds.clear();
+    el("selectionToolbar").style.display = "none";
+    renderList();
+  }
+  function toggleSelect(id) {
+    if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    updateSelectionToolbar();
+    renderList();
+  }
+  function updateSelectionToolbar() {
+    el("selectionCount").textContent = selectedIds.size + " ta tanlandi";
+    const total = Object.keys(items).length;
+    el("selectAllCheckbox").checked = total > 0 && selectedIds.size === total;
+  }
+
+  el("selectAllCheckbox").addEventListener("change", (e) => {
+    if (e.target.checked) Object.keys(items).forEach((id) => selectedIds.add(id));
+    else selectedIds.clear();
+    updateSelectionToolbar();
+    renderList();
+  });
+
+  el("cancelSelectBtn").addEventListener("click", exitSelectMode);
+
+  el("bulkDeleteBtn").addEventListener("click", () => {
+    if (selectedIds.size === 0) { showError("Hech narsa tanlanmagan."); return; }
+    if (!confirm(`${selectedIds.size} ta tovarni oʻchirmoqchimisiz?`)) return;
+    const removed = [];
+    selectedIds.forEach((id) => { if (items[id]) removed.push({ id, data: items[id] }); });
+    pushUndo(removed);
+    const ids = Array.from(selectedIds);
+    Promise.all(ids.map((id) => itemsRef.child(id).remove()))
+      .then(() => { showStatus(`${removed.length} ta tovar oʻchirildi ✓`); exitSelectMode(); })
+      .catch((e) => showError(e.message));
+  });
+
+  // ---- Uzoq bosish orqali tanlash rejimini yoqish (kompyuter va telefonda) ----
+  function attachLongPress(container) {
+    container.addEventListener("mousedown", pressStart);
+    container.addEventListener("touchstart", pressStart, { passive: true });
+    container.addEventListener("mouseup", pressEnd);
+    container.addEventListener("touchend", pressEnd);
+    container.addEventListener("mouseleave", pressCancel);
+  }
+  function pressStart(e) {
+    const delBtn = e.target.closest(".delete-item");
+    if (!delBtn) return;
+    longPressFired = false;
+    longPressTimer = setTimeout(() => {
+      longPressFired = true;
+      enterSelectMode(delBtn.dataset.id);
+    }, 550);
+  }
+  function pressEnd() { clearTimeout(longPressTimer); }
+  function pressCancel() { clearTimeout(longPressTimer); }
+  attachLongPress(el("tableBody"));
+  attachLongPress(el("cardList"));
+
+  // ---- Bekor qilish (Ctrl+Z) ----
+  function pushUndo(entries) {
+    undoStack.push(entries);
+    if (undoStack.length > 15) undoStack.shift();
+  }
+  document.addEventListener("keydown", (e) => {
+    const isUndo = (e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z");
+    if (!isUndo) return;
+    e.preventDefault();
+    if (undoStack.length === 0) { showStatus("Bekor qilish uchun hech narsa yoʻq."); return; }
+    const entries = undoStack.pop();
+    Promise.all(entries.map(({ id, data }) => itemsRef.child(id).set(data)))
+      .then(() => showStatus(`${entries.length} ta tovar tiklandi ✓ (Ctrl+Z)`))
+      .catch((e) => showError(e.message));
+  });
 
   el("searchInput").addEventListener("input", renderList);
 
