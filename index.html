@@ -187,7 +187,24 @@
     padding: 14px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 20px;
   }
   .config-warning code { background: #00000010; padding: 1px 5px; border-radius: 4px; }
+
+  #orderSearchResults .order-search-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  #orderSearchResults .order-search-item:last-child { border-bottom: none; }
+  #orderSearchResults .order-search-item:hover { background: var(--bg); }
+
+  @media print {
+    body * { visibility: hidden; }
+    #printReceipt, #printReceipt * { visibility: visible; }
+    #printReceipt {
+      display: block !important; position: absolute; left: 0; top: 0; width: 100%;
+      padding: 24px; color: #000; font-family: 'Inter', sans-serif;
+    }
+  }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -246,6 +263,7 @@
     <button class="tab-btn" data-tab="restock">📦 Yuk keldi</button>
     <button class="tab-btn" data-tab="sale">🛒 Sotildi</button>
     <button class="tab-btn" data-tab="expenses">💸 Rasxodlar</button>
+    <button class="tab-btn" data-tab="order">📋 Buyurtma</button>
   </div>
 
   <!-- Yangi tovar qo'shish -->
@@ -308,6 +326,34 @@
     </table>
     <div id="saleCardList"></div>
     <div id="saleEmptyState" class="empty" style="display:none;"></div>
+  </div>
+
+  <!-- Buyurtma / Spiska -->
+  <div class="tab-panel" id="panel-order">
+    <div class="card" style="position:relative;">
+      <div class="card-title">Tovar qidirib roʻyxatga qoʻshish</div>
+      <input id="orderSearchInput" placeholder="Tovar nomini yozing..." style="width:100%; padding:10px 12px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; box-sizing:border-box;" />
+      <div id="orderSearchResults" style="display:none; position:absolute; left:18px; right:18px; top:78px; background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.15); z-index:10; max-height:240px; overflow-y:auto;"></div>
+    </div>
+
+    <table>
+      <thead><tr><th>Nomi</th><th>Miqdor</th><th>Narxi</th><th>Jami</th><th></th></tr></thead>
+      <tbody id="orderCartBody"></tbody>
+    </table>
+    <div id="orderEmptyState" class="empty">Roʻyxat boʻsh — yuqoridan tovar qidirib qoʻshing.</div>
+
+    <div class="stats-row" style="margin-top:14px;">
+      <div class="stat-box" style="flex:1 1 100%;">
+        <div class="label">Jami hisob</div>
+        <div class="value" id="orderGrandTotal" style="color: var(--navy);">0</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="orderPrintBtn" style="flex:1;">🖨️ Chop etish</button>
+      <button class="btn btn-ghost" id="orderImageBtn" style="flex:1;">🖼️ Rasmga olish</button>
+      <button class="btn btn-primary" id="orderConfirmBtn" style="flex:1 1 100%;">✅ Tasdiqlash (ombordan ayirish)</button>
+    </div>
   </div>
 
   <!-- Rasxodlar -->
@@ -378,6 +424,26 @@
     <div id="emptyState" class="empty" style="display:none;"></div>
   </div>
 
+</div>
+
+<div id="printReceipt" style="display:none;"></div>
+
+<!-- Rasm ko'rsatish oynasi -->
+<div class="modal-overlay" id="imagePreviewModal" style="display:none;">
+  <div class="modal-box" style="max-width:400px;">
+    <h2>Buyurtma rasmi tayyor</h2>
+    <div style="max-height:50vh; overflow-y:auto; margin:10px 0; border:1px solid var(--border); border-radius:8px;">
+      <img id="capturedImg" style="width:100%; display:block;" />
+    </div>
+    <p style="font-size:12px; color:var(--text-mute); margin-bottom:12px;">
+      📱 Telefonda: rasmni bosib turing → "Save Image" / "Rasmni saqlash" tanlang.<br/>
+      💻 Kompyuterda: pastdagi tugma orqali yuklab oling.
+    </p>
+    <div style="display:flex; gap:8px;">
+      <a id="downloadImgBtn" class="btn btn-primary" download="buyurtma.png" style="flex:1; text-align:center; text-decoration:none;">⬇️ Yuklab olish</a>
+      <button class="btn btn-ghost" id="closeImageModal" style="flex:1;">Yopish</button>
+    </div>
+  </div>
 </div>
 
 <!-- Sotish oynasi -->
@@ -1080,6 +1146,186 @@
   renderExpenses();
   renderSales();
   el("filterAll").classList.add("active-filter");
+
+  // ======================================================================
+  // BUYURTMA / SPISKA — savat: tovar qidirib qo'shish, jami hisoblash,
+  // tasdiqlansa ombordan ayiriladi va sotuvlar tarixiga yoziladi
+  // ======================================================================
+  let cart = {}; // { itemId: {name, qty, price} }
+
+  function renderOrderSearch() {
+    const q = el("orderSearchInput").value.trim().toLowerCase();
+    const results = el("orderSearchResults");
+    if (!q) { results.style.display = "none"; results.innerHTML = ""; return; }
+    const matches = Object.entries(items)
+      .filter(([, it]) => it.name.toLowerCase().includes(q))
+      .slice(0, 8);
+    if (matches.length === 0) {
+      results.innerHTML = `<div style="padding:10px 12px; font-size:13px; color:var(--text-mute);">Topilmadi</div>`;
+    } else {
+      results.innerHTML = matches.map(([id, it]) => `
+        <div class="order-search-item" data-id="${id}">
+          <span>${escapeHtml(it.name)}</span>
+          <span class="mf" style="color:var(--text-mute);">bor: ${it.qty} · ${fmt(it.retail)}</span>
+        </div>`).join("");
+    }
+    results.style.display = "block";
+  }
+  el("orderSearchInput").addEventListener("input", renderOrderSearch);
+  el("orderSearchResults").addEventListener("click", (e) => {
+    const row = e.target.closest(".order-search-item");
+    if (!row) return;
+    addToCart(row.dataset.id);
+    el("orderSearchInput").value = "";
+    el("orderSearchResults").style.display = "none";
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#orderSearchInput") && !e.target.closest("#orderSearchResults")) {
+      el("orderSearchResults").style.display = "none";
+    }
+  });
+
+  function addToCart(id) {
+    const it = items[id];
+    if (!it) return;
+    if (cart[id]) cart[id].qty += 1;
+    else cart[id] = { name: it.name, qty: 1, price: it.retail };
+    renderCart();
+  }
+
+  function renderCart() {
+    const rows = Object.entries(cart);
+    const body = el("orderCartBody");
+    el("orderEmptyState").style.display = rows.length === 0 ? "block" : "none";
+    body.innerHTML = rows.map(([id, c]) => `
+      <tr data-id="${id}">
+        <td>${escapeHtml(c.name)}</td>
+        <td><input type="text" inputmode="numeric" class="cart-qty mf" data-id="${id}" value="${c.qty}" style="width:60px; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" /></td>
+        <td><input type="text" inputmode="decimal" class="cart-price mf" data-id="${id}" value="${c.price}" style="width:100px; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);" /></td>
+        <td class="mf line-total">${fmt(c.qty * c.price)}</td>
+        <td><button class="icon-btn del cart-remove" data-id="${id}">🗑</button></td>
+      </tr>`).join("");
+    updateGrandTotal();
+  }
+
+  function updateGrandTotal() {
+    const total = Object.values(cart).reduce((s, c) => s + c.qty * c.price, 0);
+    el("orderGrandTotal").textContent = fmt(total);
+  }
+
+  el("orderCartBody").addEventListener("input", (e) => {
+    const id = e.target.dataset.id;
+    if (!id || !cart[id]) return;
+    if (e.target.classList.contains("cart-qty")) {
+      const v = parseInt(e.target.value, 10);
+      cart[id].qty = (isNaN(v) || v < 1) ? 1 : v;
+    } else if (e.target.classList.contains("cart-price")) {
+      const v = parseFloat(e.target.value);
+      cart[id].price = (isNaN(v) || v < 0) ? 0 : v;
+    }
+    const row = e.target.closest("tr");
+    if (row) row.querySelector(".line-total").textContent = fmt(cart[id].qty * cart[id].price);
+    updateGrandTotal();
+  });
+
+  el("orderCartBody").addEventListener("click", (e) => {
+    const btn = e.target.closest(".cart-remove");
+    if (!btn) return;
+    delete cart[btn.dataset.id];
+    renderCart();
+  });
+
+  function buildReceiptHtml(rows, total) {
+    return `
+      <h2 style="margin:0 0 4px;">Doʻkon Hisob-kitob Tizimi</h2>
+      <div style="font-size:13px; margin-bottom:16px;">Sana: ${fmtDateTime(Date.now())} · Xodim: ${escapeHtml(staffName || "—")}</div>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid #000;">
+          <th style="text-align:left; padding:6px 4px;">Nomi</th>
+          <th style="text-align:right; padding:6px 4px;">Miqdor</th>
+          <th style="text-align:right; padding:6px 4px;">Narxi</th>
+          <th style="text-align:right; padding:6px 4px;">Jami</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(([, c]) => `
+            <tr style="border-bottom:1px solid #ccc;">
+              <td style="padding:6px 4px;">${escapeHtml(c.name)}</td>
+              <td style="text-align:right; padding:6px 4px;">${c.qty}</td>
+              <td style="text-align:right; padding:6px 4px;">${fmt(c.price)}</td>
+              <td style="text-align:right; padding:6px 4px;">${fmt(c.qty * c.price)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <div style="text-align:right; font-size:17px; font-weight:700; margin-top:12px;">Jami: ${fmt(total)}</div>
+    `;
+  }
+
+  el("orderPrintBtn").addEventListener("click", () => {
+    const rows = Object.entries(cart);
+    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
+    showError("");
+    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
+    el("printReceipt").innerHTML = buildReceiptHtml(rows, total);
+    setTimeout(() => window.print(), 100);
+  });
+
+  el("orderImageBtn").addEventListener("click", async () => {
+    const rows = Object.entries(cart);
+    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
+    showError("");
+    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
+
+    const temp = document.createElement("div");
+    temp.style.cssText = "position:fixed; left:-9999px; top:0; width:380px; background:#fff; color:#000; padding:16px; font-family:Inter, sans-serif;";
+    temp.innerHTML = buildReceiptHtml(rows, total);
+    document.body.appendChild(temp);
+
+    try {
+      const canvas = await html2canvas(temp, { backgroundColor: "#ffffff", scale: 2 });
+      const dataUrl = canvas.toDataURL("image/png");
+      el("capturedImg").src = dataUrl;
+      el("downloadImgBtn").href = dataUrl;
+      el("imagePreviewModal").style.display = "flex";
+    } catch (e) {
+      showError("Rasmga olishda xatolik: " + e.message);
+    } finally {
+      document.body.removeChild(temp);
+    }
+  });
+
+  el("closeImageModal").addEventListener("click", () => {
+    el("imagePreviewModal").style.display = "none";
+  });
+
+  el("orderConfirmBtn").addEventListener("click", () => {
+    const rows = Object.entries(cart);
+    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
+    for (const [id, c] of rows) {
+      const it = items[id];
+      if (!it) { showError(`"${c.name}" endi mavjud emas.`); return; }
+      if (c.qty > it.qty) { showError(`"${it.name}" da faqat ${it.qty} dona bor.`); return; }
+    }
+    showError("");
+    const now = Date.now();
+    const stockUpdates = rows.map(([id, c]) => {
+      const it = items[id];
+      return itemsRef.child(id).update({ qty: it.qty - c.qty, lastBy: staffName || "Nomaʼlum", updatedAt: now });
+    });
+    const saleLogs = rows.map(([, c]) => {
+      const saleId = uid();
+      return salesRef.child(saleId).set({
+        itemName: c.name, qty: c.qty, unitPrice: c.price, total: c.qty * c.price,
+        date: now, addedBy: staffName || "Nomaʼlum"
+      });
+    });
+    Promise.all([...stockUpdates, ...saleLogs]).then(() => {
+      showStatus(`Buyurtma yakunlandi — ${rows.length} xil tovar ombordan ayirildi ✓`);
+      cart = {};
+      renderCart();
+    }).catch((e) => showError(e.message));
+  });
+
+  renderCart();
 </script>
 
 </body>
