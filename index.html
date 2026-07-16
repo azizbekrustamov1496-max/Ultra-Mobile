@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ultra Mobile</title>
+<title>Doʻkon Hisob-kitob Tizimi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -196,6 +196,7 @@
   #orderSearchResults .order-search-item:hover { background: var(--bg); }
 
   @media print {
+    @page { margin: 10mm; }
     body * { visibility: hidden; }
     #printReceipt, #printReceipt * { visibility: visible; }
     #printReceipt {
@@ -234,7 +235,7 @@
 </div>
 
 <div class="topbar">
-  <h1>Ultra Mobile</h1>
+  <h1>Doʻkon Hisob-kitob Tizimi</h1>
   <div class="right">
     <span id="staffLabel"></span>
     <button class="theme-btn" id="themeToggle" title="Rejimni almashtirish">🌙</button>
@@ -1237,26 +1238,38 @@
 
   function buildReceiptHtml(rows, total) {
     return `
-      <h2 style="margin:0 0 4px;">Ultra Mobile</h2>
-      <div style="font-size:13px; margin-bottom:16px;">Sana: ${fmtDateTime(Date.now())} · Xodim: ${escapeHtml(staffName || "—")}</div>
-      <table style="width:100%; border-collapse:collapse;">
-        <thead><tr style="border-bottom:2px solid #000;">
-          <th style="text-align:left; padding:6px 4px;">Nomi</th>
-          <th style="text-align:right; padding:6px 4px;">Miqdor</th>
-          <th style="text-align:right; padding:6px 4px;">Narxi</th>
-          <th style="text-align:right; padding:6px 4px;">Jami</th>
-        </tr></thead>
-        <tbody>
-          ${rows.map(([, c]) => `
-            <tr style="border-bottom:1px solid #ccc;">
-              <td style="padding:6px 4px;">${escapeHtml(c.name)}</td>
-              <td style="text-align:right; padding:6px 4px;">${c.qty}</td>
-              <td style="text-align:right; padding:6px 4px;">${fmt(c.price)}</td>
-              <td style="text-align:right; padding:6px 4px;">${fmt(c.qty * c.price)}</td>
-            </tr>`).join("")}
-        </tbody>
-      </table>
-      <div style="text-align:right; font-size:17px; font-weight:700; margin-top:12px;">Jami: ${fmt(total)}</div>
+      <div style="max-width:380px; margin:0 auto; font-family:'Inter',sans-serif; color:#111;">
+        <div style="text-align:center; border-bottom:2px solid #111; padding-bottom:12px; margin-bottom:14px;">
+          <div style="font-size:19px; font-weight:700; letter-spacing:0.3px;">Doʻkon Hisob-kitob Tizimi</div>
+        </div>
+        <div style="font-size:13px; margin-bottom:14px; line-height:1.7;">
+          <div><strong>Sana:</strong> ${fmtDateTime(Date.now())}</div>
+          <div><strong>Xodim:</strong> ${escapeHtml(staffName || "—")}</div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="background:#eef1f4;">
+              <th style="text-align:left; padding:8px 6px; border-bottom:2px solid #111;">Nomi</th>
+              <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Miqdor</th>
+              <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Narxi</th>
+              <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Jami</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(([, c], i) => `
+              <tr style="background:${i % 2 === 0 ? "#ffffff" : "#f7f8fa"};">
+                <td style="padding:8px 6px; border-bottom:1px solid #ddd;">${escapeHtml(c.name)}</td>
+                <td style="text-align:right; padding:8px 6px; border-bottom:1px solid #ddd;">${c.qty}</td>
+                <td style="text-align:right; padding:8px 6px; border-bottom:1px solid #ddd;">${fmt(c.price)}</td>
+                <td style="text-align:right; padding:8px 6px; border-bottom:1px solid #ddd;">${fmt(c.qty * c.price)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:2px solid #111;">
+          <span style="font-size:14px; font-weight:700;">JAMI</span>
+          <span style="font-size:21px; font-weight:800;">${fmt(total)}</span>
+        </div>
+      </div>
     `;
   }
 
