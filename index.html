@@ -197,11 +197,10 @@
 
   @media print {
     @page { margin: 10mm; }
-    body * { visibility: hidden; }
-    #printReceipt, #printReceipt * { visibility: visible; }
+    #codeModal, #nameModal, .topbar, .wrap, #imagePreviewModal, #sellModal { display: none !important; }
     #printReceipt {
-      display: block !important; position: absolute; left: 0; top: 0; width: 100%;
-      padding: 24px; color: #000; font-family: 'Inter', sans-serif;
+      display: block !important; position: static; width: 100%;
+      padding: 0; color: #000; font-family: 'Inter', sans-serif;
     }
   }
 </style>
