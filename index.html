@@ -165,7 +165,7 @@
   .item-card .actions { display: flex; gap: 6px; margin-top: 8px; }
 
   @media (max-width: 720px) {
-    table { display: none; }
+    #panel-list table, #panel-expenses table, #panel-sale table, #panel-debts table { display: none; }
     .item-card { display: block; }
   }
 
@@ -254,7 +254,8 @@
     <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
     <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
     <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
-    <div class="stat-box"><div class="label">Ombor qiymati</div><div class="value" id="statValue">0</div></div>
+    <div class="stat-box"><div class="label">Ombor qiymati (tannarx)</div><div class="value" id="statValue">0</div></div>
+    <div class="stat-box"><div class="label">Sotilsa tushadigan pul</div><div class="value" id="statRetailValue" style="color: var(--green);">0</div></div>
   </div>
 
   <div class="tabs">
@@ -264,6 +265,7 @@
     <button class="tab-btn" data-tab="sale">🛒 Sotildi</button>
     <button class="tab-btn" data-tab="expenses">💸 Rasxodlar</button>
     <button class="tab-btn" data-tab="order">📋 Buyurtma</button>
+    <button class="tab-btn" data-tab="debts">🧾 Qarzdorlar</button>
   </div>
 
   <!-- Yangi tovar qo'shish -->
@@ -336,10 +338,12 @@
       <div id="orderSearchResults" style="display:none; position:absolute; left:18px; right:18px; top:78px; background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.15); z-index:10; max-height:240px; overflow-y:auto;"></div>
     </div>
 
-    <table>
-      <thead><tr><th>Nomi</th><th>Miqdor</th><th>Narxi</th><th>Jami</th><th></th></tr></thead>
-      <tbody id="orderCartBody"></tbody>
-    </table>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Nomi</th><th>Soni</th><th>Narxi</th><th>Jami</th><th></th></tr></thead>
+        <tbody id="orderCartBody"></tbody>
+      </table>
+    </div>
     <div id="orderEmptyState" class="empty">Roʻyxat boʻsh — yuqoridan tovar qidirib qoʻshing.</div>
 
     <div class="stats-row" style="margin-top:14px;">
@@ -353,7 +357,39 @@
       <button class="btn btn-ghost" id="orderPrintBtn" style="flex:1;">🖨️ Chop etish</button>
       <button class="btn btn-ghost" id="orderImageBtn" style="flex:1;">🖼️ Rasmga olish</button>
       <button class="btn btn-primary" id="orderConfirmBtn" style="flex:1 1 100%;">✅ Tasdiqlash (ombordan ayirish)</button>
+      <button class="btn btn-danger" id="orderDebtBtn" style="flex:1 1 100%;">📝 Qarzga berish</button>
     </div>
+  </div>
+
+  <!-- Qarzdorlar -->
+  <div class="tab-panel" id="panel-debts">
+    <div class="stats-row">
+      <div class="stat-box" style="flex:1 1 100%;">
+        <div class="label">Jami qarzdorlik</div>
+        <div class="value" id="debtTotal" style="color: var(--red-exp);">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Yangi qarzdor qoʻshish</div>
+      <div class="form-grid">
+        <div class="field"><label>Ismi</label><input id="debtName" placeholder="Mijoz ismi" /></div>
+        <div class="field"><label>Telefon</label><input id="debtPhone" placeholder="+998 ..." /></div>
+        <div class="field" style="grid-column:span 2;"><label>Manzil / qayerdan</label><input id="debtAddress" placeholder="Manzil yoki qayerdanligi" /></div>
+        <div class="field"><label>Summa</label><input id="debtAmount" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Toʻlash muddati</label><input id="debtDueDate" type="date" /></div>
+      </div>
+      <button class="btn btn-primary" id="debtAddBtn">Qoʻshish</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Ismi</th><th>Telefon</th><th>Manzil</th><th>Summa</th><th>Muddat</th><th>Holati</th><th></th></tr></thead>
+        <tbody id="debtTableBody"></tbody>
+      </table>
+    </div>
+    <div id="debtCardList"></div>
+    <div id="debtEmptyState" class="empty" style="display:none;"></div>
   </div>
 
   <!-- Rasxodlar -->
@@ -428,6 +464,23 @@
 
 <div id="printReceipt" style="display:none;"></div>
 
+<!-- Qarzga berish - mijoz ma'lumoti oynasi -->
+<div class="modal-overlay" id="debtModal" style="display:none;">
+  <div class="modal-box">
+    <h2>Qarzga berish</h2>
+    <p style="margin-bottom:10px; font-size:13px; color:var(--text-mute);">Mijoz maʼlumotlarini kiriting.</p>
+    <div class="field" style="margin-bottom:8px;"><label>Ismi</label><input id="debtModalName" placeholder="Mijoz ismi" /></div>
+    <div class="field" style="margin-bottom:8px;"><label>Telefon</label><input id="debtModalPhone" placeholder="+998 ..." /></div>
+    <div class="field" style="margin-bottom:8px;"><label>Manzil / qayerdan</label><input id="debtModalAddress" placeholder="Manzil yoki qayerdanligi" /></div>
+    <div class="field" style="margin-bottom:10px;"><label>Toʻlash muddati</label><input id="debtModalDueDate" type="date" /></div>
+    <div id="debtModalError" style="color:var(--bad-text); font-size:12px; margin-bottom:10px; display:none;"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" id="debtModalConfirm" style="flex:1;">Tasdiqlash va chop etish</button>
+      <button class="btn btn-ghost" id="debtModalCancel" style="flex:1;">Bekor qilish</button>
+    </div>
+  </div>
+</div>
+
 <!-- Rasm ko'rsatish oynasi -->
 <div class="modal-overlay" id="imagePreviewModal" style="display:none;">
   <div class="modal-box" style="max-width:400px;">
@@ -484,12 +537,14 @@
   const isConfigured = !Object.values(firebaseConfig).some(v => String(v).startsWith("BU_YERGA"));
   let itemsRef = null;
   let expensesRef = null;
-  let salesRef = null; // sotuvlar tarixi - alohida "sales" bo'limi
+  let salesRef = null;
+  let debtsRef = null; // qarzdorlar - alohida "debts" bo'limi
   if (isConfigured) {
     firebase.initializeApp(firebaseConfig);
     itemsRef = firebase.database().ref("items");
     expensesRef = firebase.database().ref("expenses");
     salesRef = firebase.database().ref("sales");
+    debtsRef = firebase.database().ref("debts");
   } else {
     document.getElementById("configWarning").style.display = "block";
   }
@@ -497,6 +552,7 @@
   let items = {};
   let expenses = {};
   let sales = {};
+  let debts = {};
   let staffName = localStorage.getItem("staffName") || "";
 
   const el = (id) => document.getElementById(id);
@@ -618,6 +674,12 @@
       renderSales();
     }, (err) => showError("Ulanishda xatolik: " + err.message));
   }
+  if (debtsRef) {
+    debtsRef.on("value", (snap) => {
+      debts = snap.val() || {};
+      renderDebts();
+    }, (err) => showError("Ulanishda xatolik: " + err.message));
+  }
 
   function renderAll() {
     renderStats();
@@ -631,10 +693,12 @@
     const ok = list.filter((it) => it.qty > 0).length;
     const out = total - ok;
     const value = list.reduce((sum, it) => sum + (it.qty || 0) * (it.wholesale || 0), 0);
+    const retailValue = list.reduce((sum, it) => sum + (it.qty || 0) * (it.retail || 0), 0);
     el("statTotal").textContent = total;
     el("statOk").textContent = ok;
     el("statOut").textContent = out;
     el("statValue").textContent = fmt(value);
+    el("statRetailValue").textContent = fmt(retailValue);
   }
 
   function renderSelects() {
@@ -1119,7 +1183,7 @@
 
     el("saleTableBody").innerHTML = list.map((s) => `
       <tr>
-        <td>${escapeHtml(s.itemName)}</td>
+        <td>${escapeHtml(s.itemName)}${s.isDebt ? ` <span class="badge off" style="margin-left:4px;">Qarz</span>` : ""}</td>
         <td class="mf">${s.qty}</td>
         <td class="mf">${fmt(s.unitPrice)}</td>
         <td class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</td>
@@ -1130,7 +1194,7 @@
     el("saleCardList").innerHTML = list.map((s) => `
       <div class="item-card">
         <div class="row1">
-          <div class="name">${escapeHtml(s.itemName)} × ${s.qty}</div>
+          <div class="name">${escapeHtml(s.itemName)} × ${s.qty}${s.isDebt ? ` <span class="badge off" style="margin-left:4px;">Qarz</span>` : ""}</div>
           <span class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</span>
         </div>
         <div class="meta-line">${fmtDate(s.date)} · ${escapeHtml(s.addedBy || "—")}</div>
@@ -1166,7 +1230,7 @@
       results.innerHTML = matches.map(([id, it]) => `
         <div class="order-search-item" data-id="${id}">
           <span>${escapeHtml(it.name)}</span>
-          <span class="mf" style="color:var(--text-mute);">bor: ${it.qty} · ${fmt(it.retail)}</span>
+          <span class="mf" style="color:var(--text); font-size:14px; font-weight:600;">bor: ${it.qty} · ${fmt(it.retail)}</span>
         </div>`).join("");
     }
     results.style.display = "block";
@@ -1188,8 +1252,13 @@
   function addToCart(id) {
     const it = items[id];
     if (!it) return;
-    if (cart[id]) cart[id].qty += 1;
-    else cart[id] = { name: it.name, qty: 1, price: it.retail };
+    const qtyStr = window.prompt(`"${it.name}" — nechta qoʻshmoqchisiz?`, "1");
+    if (qtyStr === null) return; // bekor qilindi
+    const qty = parseInt(qtyStr, 10);
+    if (isNaN(qty) || qty <= 0) { showError("Miqdorni toʻgʻri kiriting."); return; }
+    showError("");
+    if (cart[id]) cart[id].qty += qty;
+    else cart[id] = { name: it.name, qty, price: it.retail };
     renderCart();
   }
 
@@ -1235,21 +1304,31 @@
     renderCart();
   });
 
-  function buildReceiptHtml(rows, total) {
+  function buildReceiptHtml(rows, total, debtInfo) {
+    const customerBlock = debtInfo ? `
+      <div style="font-size:13px; margin-bottom:4px;"><strong>Mijoz:</strong> ${escapeHtml(debtInfo.name)}</div>
+      <div style="font-size:13px; margin-bottom:4px;"><strong>Telefon:</strong> ${escapeHtml(debtInfo.phone)}</div>
+      ${debtInfo.address ? `<div style="font-size:13px; margin-bottom:4px;"><strong>Manzil:</strong> ${escapeHtml(debtInfo.address)}</div>` : ""}
+    ` : "";
+    const reminderBlock = debtInfo ? `
+      <div style="margin-top:16px; padding:12px; border:1.5px dashed #b33333; border-radius:6px; font-size:13px; text-align:center; color:#8a1f1f;">
+        Hurmatli mijoz, iltimos qarzingizni <strong>${debtInfo.dueDateStr}</strong> gacha toʻlashni unutmang!
+      </div>` : "";
     return `
       <div style="max-width:380px; margin:0 auto; font-family:'Inter',sans-serif; color:#111;">
         <div style="text-align:center; border-bottom:2px solid #111; padding-bottom:12px; margin-bottom:14px;">
-          <div style="font-size:19px; font-weight:700; letter-spacing:0.3px;">Doʻkon Hisob-kitob Tizimi</div>
+          <div style="font-size:19px; font-weight:700; letter-spacing:0.3px;">Ultra Mobile</div>
         </div>
         <div style="font-size:13px; margin-bottom:14px; line-height:1.7;">
           <div><strong>Sana:</strong> ${fmtDateTime(Date.now())}</div>
           <div><strong>Xodim:</strong> ${escapeHtml(staffName || "—")}</div>
+          ${customerBlock}
         </div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
           <thead>
             <tr style="background:#eef1f4;">
               <th style="text-align:left; padding:8px 6px; border-bottom:2px solid #111;">Nomi</th>
-              <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Miqdor</th>
+              <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Soni</th>
               <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Narxi</th>
               <th style="text-align:right; padding:8px 6px; border-bottom:2px solid #111;">Jami</th>
             </tr>
@@ -1268,6 +1347,7 @@
           <span style="font-size:14px; font-weight:700;">JAMI</span>
           <span style="font-size:21px; font-weight:800;">${fmt(total)}</span>
         </div>
+        ${reminderBlock}
       </div>
     `;
   }
@@ -1335,6 +1415,167 @@
       cart = {};
       renderCart();
     }).catch((e) => showError(e.message));
+  });
+
+  // ======================================================================
+  // QARZDORLAR — mustaqil bo'lim (Firebase "debts"), Buyurtma bilan ham bog'lanadi
+  // ======================================================================
+  function renderDebts() {
+    const list = Object.entries(debts).map(([id, d]) => ({ id, ...d }))
+      .sort((a, b) => (b.dateGiven || 0) - (a.dateGiven || 0));
+
+    const totalUnpaid = list.filter((d) => !d.paid).reduce((s, d) => s + (d.amount || 0), 0);
+    el("debtTotal").textContent = fmt(totalUnpaid);
+
+    const empty = el("debtEmptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = "Hali qarzdor yo'q.";
+      el("debtTableBody").innerHTML = "";
+      el("debtCardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    const rowInner = (d) => `
+      <span class="badge ${d.paid ? "on" : "off"}">${d.paid ? "Toʻlangan" : "Qarzdor"}</span>
+      <button class="icon-btn debt-addmore" data-id="${d.id}" title="Qarzga qo'shish">➕</button>
+      ${!d.paid ? `<button class="icon-btn debt-paid" data-id="${d.id}" title="To'landi deb belgilash">✅</button>` : ""}
+      <button class="icon-btn del debt-delete" data-id="${d.id}">🗑</button>`;
+
+    el("debtTableBody").innerHTML = list.map((d) => `
+      <tr data-id="${d.id}">
+        <td>${escapeHtml(d.customerName)}</td>
+        <td>${escapeHtml(d.phone || "—")}</td>
+        <td>${escapeHtml(d.address || "—")}</td>
+        <td class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</td>
+        <td>${d.dueDate ? fmtDate(d.dueDate) : "—"}</td>
+        <td>${rowInner(d)}</td>
+      </tr>`).join("");
+
+    el("debtCardList").innerHTML = list.map((d) => `
+      <div class="item-card" data-id="${d.id}">
+        <div class="row1">
+          <div class="name">${escapeHtml(d.customerName)}</div>
+          <span class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</span>
+        </div>
+        <div class="meta-line">📞 ${escapeHtml(d.phone || "—")} · 📍 ${escapeHtml(d.address || "—")}</div>
+        <div class="meta-line">Muddat: ${d.dueDate ? fmtDate(d.dueDate) : "—"}</div>
+        <div class="actions">${rowInner(d)}</div>
+      </div>`).join("");
+  }
+
+  function handleDebtClick(e) {
+    const t = e.target.closest("button");
+    if (!t) return;
+    const id = t.dataset.id;
+    if (t.classList.contains("debt-paid")) {
+      debtsRef.child(id).update({ paid: true, paidDate: Date.now() }).catch((e) => showError(e.message));
+    } else if (t.classList.contains("debt-addmore")) {
+      const d = debts[id];
+      if (!d) return;
+      const addStr = window.prompt(`"${d.customerName}" uchun yana qancha qarz qoʻshmoqchisiz?`, "");
+      if (addStr === null) return;
+      const addAmt = parseFloat(addStr);
+      if (isNaN(addAmt) || addAmt <= 0) { showError("Summani toʻgʻri kiriting."); return; }
+      showError("");
+      debtsRef.child(id).update({
+        amount: (d.amount || 0) + addAmt, paid: false, dateGiven: Date.now()
+      }).then(() => showStatus(`${d.customerName} qarziga ${fmt(addAmt)} qoʻshildi ✓`))
+        .catch((e) => showError(e.message));
+    } else if (t.classList.contains("debt-delete")) {
+      if (confirm("Ushbu qarzdorlik yozuvini oʻchirmoqchimisiz?")) {
+        debtsRef.child(id).remove().catch((e) => showError(e.message));
+      }
+    }
+  }
+  el("debtTableBody").addEventListener("click", handleDebtClick);
+  el("debtCardList").addEventListener("click", handleDebtClick);
+
+  el("debtAddBtn").addEventListener("click", () => {
+    const name = el("debtName").value.trim();
+    const phone = el("debtPhone").value.trim();
+    const address = el("debtAddress").value.trim();
+    const amount = parseFloat(el("debtAmount").value);
+    const dueDateVal = el("debtDueDate").value;
+    if (!name) return showError("Mijoz ismini kiriting.");
+    if (isNaN(amount) || amount <= 0) return showError("Summani toʻgʻri kiriting.");
+    showError("");
+    const dueDate = dueDateVal ? new Date(dueDateVal + "T12:00:00").getTime() : null;
+    const id = uid();
+    debtsRef.child(id).set({
+      customerName: name, phone, address, amount, dueDate,
+      dateGiven: Date.now(), paid: false, addedBy: staffName || "Nomaʼlum"
+    }).then(() => {
+      el("debtName").value = ""; el("debtPhone").value = ""; el("debtAddress").value = ""; el("debtAmount").value = ""; el("debtDueDate").value = "";
+      showStatus("Qarzdor qoʻshildi ✓");
+    }).catch((e) => showError(e.message));
+  });
+
+  // ---- Buyurtmadan to'g'ridan-to'g'ri "Qarzga berish" ----
+  el("orderDebtBtn").addEventListener("click", () => {
+    const rows = Object.entries(cart);
+    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
+    for (const [id, c] of rows) {
+      const it = items[id];
+      if (!it) { showError(`"${c.name}" endi mavjud emas.`); return; }
+      if (c.qty > it.qty) { showError(`"${it.name}" da faqat ${it.qty} dona bor.`); return; }
+    }
+    showError("");
+    el("debtModalName").value = "";
+    el("debtModalPhone").value = "";
+    el("debtModalAddress").value = "";
+    el("debtModalDueDate").value = "";
+    el("debtModalError").style.display = "none";
+    el("debtModal").style.display = "flex";
+  });
+
+  el("debtModalCancel").addEventListener("click", () => { el("debtModal").style.display = "none"; });
+
+  el("debtModalConfirm").addEventListener("click", () => {
+    const rows = Object.entries(cart);
+    const name = el("debtModalName").value.trim();
+    const phone = el("debtModalPhone").value.trim();
+    const address = el("debtModalAddress").value.trim();
+    const dueDateVal = el("debtModalDueDate").value;
+    const errBox = el("debtModalError");
+    if (!name) { errBox.textContent = "Mijoz ismini kiriting."; errBox.style.display = "block"; return; }
+    if (!phone) { errBox.textContent = "Telefon raqamini kiriting."; errBox.style.display = "block"; return; }
+    if (!dueDateVal) { errBox.textContent = "Toʻlash muddatini tanlang."; errBox.style.display = "block"; return; }
+    errBox.style.display = "none";
+
+    const now = Date.now();
+    const dueDate = new Date(dueDateVal + "T12:00:00").getTime();
+    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
+
+    const stockUpdates = rows.map(([id, c]) => {
+      const it = items[id];
+      return itemsRef.child(id).update({ qty: it.qty - c.qty, lastBy: staffName || "Nomaʼlum", updatedAt: now });
+    });
+    const itemsSummary = rows.map(([, c]) => `${c.name} x${c.qty}`).join(", ");
+    const debtId = uid();
+    const debtSave = debtsRef.child(debtId).set({
+      customerName: name, phone, address, amount: total, items: itemsSummary,
+      dueDate, dateGiven: now, paid: false, addedBy: staffName || "Nomaʼlum"
+    });
+    // Qarzga berilgan tovar ham "Sotildi" tarixiga yoziladi (tovar ombordan chiqdi hisoblanadi)
+    const saleLogs = rows.map(([, c]) => {
+      const saleId = uid();
+      return salesRef.child(saleId).set({
+        itemName: c.name, qty: c.qty, unitPrice: c.price, total: c.qty * c.price,
+        date: now, addedBy: staffName || "Nomaʼlum", isDebt: true, customerName: name
+      });
+    });
+
+    Promise.all([...stockUpdates, debtSave, ...saleLogs]).then(() => {
+      const debtInfo = { name, phone, address, dueDateStr: fmtDate(dueDate) };
+      el("printReceipt").innerHTML = buildReceiptHtml(rows, total, debtInfo);
+      el("debtModal").style.display = "none";
+      showStatus(`Qarzga berildi — ${name} uchun ${fmt(total)} qarz yozildi ✓`);
+      cart = {};
+      renderCart();
+      setTimeout(() => window.print(), 150);
+    }).catch((e) => { errBox.textContent = e.message; errBox.style.display = "block"; });
   });
 
   renderCart();
