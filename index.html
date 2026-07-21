@@ -365,9 +365,21 @@
   <!-- Qarzdorlar -->
   <div class="tab-panel" id="panel-debts">
     <div class="stats-row">
-      <div class="stat-box" style="flex:1 1 100%;">
-        <div class="label">Jami qarzdorlik</div>
+      <div class="stat-box filter-box" id="debtFilterAll" data-filter="all">
+        <div class="label">Jami (hammasi)</div>
+        <div class="value" id="debtCountAll">0</div>
+      </div>
+      <div class="stat-box filter-box" id="debtFilterUnpaid" data-filter="unpaid">
+        <div class="label">Toʻlanmagan</div>
         <div class="value" id="debtTotal" style="color: var(--red-exp);">0</div>
+      </div>
+      <div class="stat-box filter-box" id="debtFilterOverdue" data-filter="overdue">
+        <div class="label">Muddati oʻtgan</div>
+        <div class="value" id="debtOverdueTotal" style="color: var(--red-exp);">0</div>
+      </div>
+      <div class="stat-box filter-box" id="debtFilterNotdue" data-filter="notdue">
+        <div class="label">Muddati oʻtmagan</div>
+        <div class="value" id="debtNotdueTotal" style="color: var(--blue-stat);">0</div>
       </div>
     </div>
 
@@ -1238,6 +1250,7 @@
   renderExpenses();
   renderSales();
   el("filterAll").classList.add("active-filter");
+  el("debtFilterAll").classList.add("active-filter");
 
   // ======================================================================
   // BUYURTMA / SPISKA — savat: tovar qidirib qo'shish, jami hisoblash,
@@ -1456,17 +1469,31 @@
   // ======================================================================
   // QARZDORLAR — mustaqil bo'lim (Firebase "debts"), Buyurtma bilan ham bog'lanadi
   // ======================================================================
+  let debtFilter = "all"; // "all" | "unpaid" | "overdue" | "notdue"
+
   function renderDebts() {
-    const list = Object.entries(debts).map(([id, d]) => ({ id, ...d }))
+    const all = Object.entries(debts).map(([id, d]) => ({ id, ...d }))
       .sort((a, b) => (b.dateGiven || 0) - (a.dateGiven || 0));
 
-    const totalUnpaid = list.filter((d) => !d.paid).reduce((s, d) => s + (d.amount || 0), 0);
-    el("debtTotal").textContent = fmt(totalUnpaid);
+    const now = Date.now();
+    const unpaid = all.filter((d) => !d.paid);
+    const overdue = unpaid.filter((d) => d.dueDate && d.dueDate < now);
+    const notdue = unpaid.filter((d) => !d.dueDate || d.dueDate >= now);
+
+    el("debtCountAll").textContent = all.length;
+    el("debtTotal").textContent = fmt(unpaid.reduce((s, d) => s + (d.amount || 0), 0));
+    el("debtOverdueTotal").textContent = fmt(overdue.reduce((s, d) => s + (d.amount || 0), 0));
+    el("debtNotdueTotal").textContent = fmt(notdue.reduce((s, d) => s + (d.amount || 0), 0));
+
+    let list = all;
+    if (debtFilter === "unpaid") list = unpaid;
+    else if (debtFilter === "overdue") list = overdue;
+    else if (debtFilter === "notdue") list = notdue;
 
     const empty = el("debtEmptyState");
     if (list.length === 0) {
       empty.style.display = "block";
-      empty.textContent = "Hali qarzdor yo'q.";
+      empty.textContent = all.length === 0 ? "Hali qarzdor yo'q." : "Bu filtr boʻyicha hech kim topilmadi.";
       el("debtTableBody").innerHTML = "";
       el("debtCardList").innerHTML = "";
       return;
@@ -1480,6 +1507,14 @@
       ${!d.paid ? `<button class="icon-btn debt-paid" data-id="${d.id}" title="To'landi deb belgilash">✅</button>` : ""}
       <button class="icon-btn del debt-delete" data-id="${d.id}">🗑</button>`;
 
+    const dueLabel = (d) => {
+      if (!d.dueDate) return "—";
+      const isOverdue = !d.paid && d.dueDate < now;
+      return isOverdue
+        ? `<span style="color:var(--bad-text); font-weight:700;">${fmtDate(d.dueDate)} ⚠️</span>`
+        : fmtDate(d.dueDate);
+    };
+
     el("debtTableBody").innerHTML = list.map((d) => `
       <tr data-id="${d.id}">
         <td>${escapeHtml(d.customerName)}</td>
@@ -1487,7 +1522,7 @@
         <td>${escapeHtml(d.address || "—")}</td>
         <td class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</td>
         <td>${d.dateGiven ? fmtDate(d.dateGiven) : "—"}</td>
-        <td>${d.dueDate ? fmtDate(d.dueDate) : "—"}</td>
+        <td>${dueLabel(d)}</td>
         <td>${rowInner(d)}</td>
       </tr>`).join("");
 
@@ -1498,7 +1533,7 @@
           <span class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</span>
         </div>
         <div class="meta-line">📞 ${escapeHtml(d.phone || "—")} · 📍 ${escapeHtml(d.address || "—")}</div>
-        <div class="meta-line">Oxirgi: ${d.dateGiven ? fmtDate(d.dateGiven) : "—"} · Muddat: ${d.dueDate ? fmtDate(d.dueDate) : "—"}</div>
+        <div class="meta-line">Oxirgi: ${d.dateGiven ? fmtDate(d.dateGiven) : "—"} · Muddat: ${dueLabel(d)}</div>
         <div class="actions">${rowInner(d)}</div>
       </div>`).join("");
   }
@@ -1535,6 +1570,20 @@
   }
   el("debtTableBody").addEventListener("click", handleDebtClick);
   el("debtCardList").addEventListener("click", handleDebtClick);
+
+  function applyDebtFilter(f) {
+    debtFilter = f;
+    document.querySelectorAll("#panel-debts .filter-box").forEach((box) => box.classList.remove("active-filter"));
+    const activeBox = document.getElementById(
+      f === "all" ? "debtFilterAll" : f === "unpaid" ? "debtFilterUnpaid" : f === "overdue" ? "debtFilterOverdue" : "debtFilterNotdue"
+    );
+    if (activeBox) activeBox.classList.add("active-filter");
+    renderDebts();
+  }
+  el("debtFilterAll").addEventListener("click", () => applyDebtFilter("all"));
+  el("debtFilterUnpaid").addEventListener("click", () => applyDebtFilter("unpaid"));
+  el("debtFilterOverdue").addEventListener("click", () => applyDebtFilter("overdue"));
+  el("debtFilterNotdue").addEventListener("click", () => applyDebtFilter("notdue"));
 
   el("debtAddBtn").addEventListener("click", () => {
     const name = el("debtName").value.trim();
