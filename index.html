@@ -165,7 +165,7 @@
   .item-card .actions { display: flex; gap: 6px; margin-top: 8px; }
 
   @media (max-width: 720px) {
-    #panel-list table, #panel-expenses table, #panel-sale table, #panel-debts table { display: none; }
+    #panel-list table, #panel-expenses table, #panel-sale table, #panel-debts table, #panel-orderhistory table { display: none; }
     .item-card { display: block; }
   }
 
@@ -266,6 +266,7 @@
     <button class="tab-btn" data-tab="expenses">💸 Rasxodlar</button>
     <button class="tab-btn" data-tab="order">📋 Buyurtma</button>
     <button class="tab-btn" data-tab="debts">🧾 Qarzdorlar</button>
+    <button class="tab-btn" data-tab="orderhistory">✅ Toʻlanganlar</button>
   </div>
 
   <!-- Yangi tovar qo'shish -->
@@ -384,12 +385,30 @@
 
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>Ismi</th><th>Telefon</th><th>Manzil</th><th>Summa</th><th>Muddat</th><th>Holati</th><th></th></tr></thead>
+        <thead><tr><th>Ismi</th><th>Telefon</th><th>Manzil</th><th>Summa</th><th>Oxirgi sana</th><th>Muddat</th><th>Holati</th><th></th></tr></thead>
         <tbody id="debtTableBody"></tbody>
       </table>
     </div>
     <div id="debtCardList"></div>
     <div id="debtEmptyState" class="empty" style="display:none;"></div>
+  </div>
+
+  <!-- Buyurtmalar tarixi (to'langan) -->
+  <div class="tab-panel" id="panel-orderhistory">
+    <div class="stats-row">
+      <div class="stat-box" style="flex:1 1 100%;">
+        <div class="label">Jami toʻlangan buyurtmalar</div>
+        <div class="value" id="orderHistTotal" style="color: var(--green);">0</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Sana</th><th>Xodim</th><th>Tovarlar</th><th>Jami</th><th></th></tr></thead>
+        <tbody id="orderHistTableBody"></tbody>
+      </table>
+    </div>
+    <div id="orderHistCardList"></div>
+    <div id="orderHistEmptyState" class="empty" style="display:none;"></div>
   </div>
 
   <!-- Rasxodlar -->
@@ -538,13 +557,15 @@
   let itemsRef = null;
   let expensesRef = null;
   let salesRef = null;
-  let debtsRef = null; // qarzdorlar - alohida "debts" bo'limi
+  let debtsRef = null;
+  let ordersRef = null; // to'langan buyurtmalar tarixi - alohida "orders" bo'limi
   if (isConfigured) {
     firebase.initializeApp(firebaseConfig);
     itemsRef = firebase.database().ref("items");
     expensesRef = firebase.database().ref("expenses");
     salesRef = firebase.database().ref("sales");
     debtsRef = firebase.database().ref("debts");
+    ordersRef = firebase.database().ref("orders");
   } else {
     document.getElementById("configWarning").style.display = "block";
   }
@@ -553,6 +574,7 @@
   let expenses = {};
   let sales = {};
   let debts = {};
+  let orderHistory = {};
   let staffName = localStorage.getItem("staffName") || "";
 
   const el = (id) => document.getElementById(id);
@@ -678,6 +700,12 @@
     debtsRef.on("value", (snap) => {
       debts = snap.val() || {};
       renderDebts();
+    }, (err) => showError("Ulanishda xatolik: " + err.message));
+  }
+  if (ordersRef) {
+    ordersRef.on("value", (snap) => {
+      orderHistory = snap.val() || {};
+      renderOrderHistory();
     }, (err) => showError("Ulanishda xatolik: " + err.message));
   }
 
@@ -1361,17 +1389,11 @@
     setTimeout(() => window.print(), 100);
   });
 
-  el("orderImageBtn").addEventListener("click", async () => {
-    const rows = Object.entries(cart);
-    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
-    showError("");
-    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
-
+  async function captureReceiptAsImage(rows, total, debtInfo) {
     const temp = document.createElement("div");
     temp.style.cssText = "position:fixed; left:-9999px; top:0; width:380px; background:#fff; color:#000; padding:16px; font-family:Inter, sans-serif;";
-    temp.innerHTML = buildReceiptHtml(rows, total);
+    temp.innerHTML = buildReceiptHtml(rows, total, debtInfo);
     document.body.appendChild(temp);
-
     try {
       const canvas = await html2canvas(temp, { backgroundColor: "#ffffff", scale: 2 });
       const dataUrl = canvas.toDataURL("image/png");
@@ -1383,6 +1405,14 @@
     } finally {
       document.body.removeChild(temp);
     }
+  }
+
+  el("orderImageBtn").addEventListener("click", async () => {
+    const rows = Object.entries(cart);
+    if (rows.length === 0) { showError("Roʻyxat boʻsh, avval tovar qoʻshing."); return; }
+    showError("");
+    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
+    await captureReceiptAsImage(rows, total);
   });
 
   el("closeImageModal").addEventListener("click", () => {
@@ -1410,7 +1440,13 @@
         date: now, addedBy: staffName || "Nomaʼlum"
       });
     });
-    Promise.all([...stockUpdates, ...saleLogs]).then(() => {
+    const total = rows.reduce((s, [, c]) => s + c.qty * c.price, 0);
+    const itemsDetail = rows.map(([, c]) => ({ name: c.name, qty: c.qty, price: c.price }));
+    const orderId = uid();
+    const orderSave = ordersRef.child(orderId).set({
+      itemsDetail, total, date: now, addedBy: staffName || "Nomaʼlum"
+    });
+    Promise.all([...stockUpdates, ...saleLogs, orderSave]).then(() => {
       showStatus(`Buyurtma yakunlandi — ${rows.length} xil tovar ombordan ayirildi ✓`);
       cart = {};
       renderCart();
@@ -1439,6 +1475,7 @@
 
     const rowInner = (d) => `
       <span class="badge ${d.paid ? "on" : "off"}">${d.paid ? "Toʻlangan" : "Qarzdor"}</span>
+      ${d.itemsDetail ? `<button class="icon-btn debt-view" data-id="${d.id}" title="Oxirgi olgan ro'yxati">🖼️</button>` : ""}
       <button class="icon-btn debt-addmore" data-id="${d.id}" title="Qarzga qo'shish">➕</button>
       ${!d.paid ? `<button class="icon-btn debt-paid" data-id="${d.id}" title="To'landi deb belgilash">✅</button>` : ""}
       <button class="icon-btn del debt-delete" data-id="${d.id}">🗑</button>`;
@@ -1449,6 +1486,7 @@
         <td>${escapeHtml(d.phone || "—")}</td>
         <td>${escapeHtml(d.address || "—")}</td>
         <td class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</td>
+        <td>${d.dateGiven ? fmtDate(d.dateGiven) : "—"}</td>
         <td>${d.dueDate ? fmtDate(d.dueDate) : "—"}</td>
         <td>${rowInner(d)}</td>
       </tr>`).join("");
@@ -1460,7 +1498,7 @@
           <span class="mf" style="color:var(--red-exp); font-weight:600;">${fmt(d.amount)}</span>
         </div>
         <div class="meta-line">📞 ${escapeHtml(d.phone || "—")} · 📍 ${escapeHtml(d.address || "—")}</div>
-        <div class="meta-line">Muddat: ${d.dueDate ? fmtDate(d.dueDate) : "—"}</div>
+        <div class="meta-line">Oxirgi: ${d.dateGiven ? fmtDate(d.dateGiven) : "—"} · Muddat: ${d.dueDate ? fmtDate(d.dueDate) : "—"}</div>
         <div class="actions">${rowInner(d)}</div>
       </div>`).join("");
   }
@@ -1471,6 +1509,12 @@
     const id = t.dataset.id;
     if (t.classList.contains("debt-paid")) {
       debtsRef.child(id).update({ paid: true, paidDate: Date.now() }).catch((e) => showError(e.message));
+    } else if (t.classList.contains("debt-view")) {
+      const d = debts[id];
+      if (!d || !d.itemsDetail) return;
+      const rows = d.itemsDetail.map((it) => [it.name, it]);
+      const debtInfo = { name: d.customerName, phone: d.phone, address: d.address, dueDateStr: d.dueDate ? fmtDate(d.dueDate) : "—" };
+      captureReceiptAsImage(rows, d.amount, debtInfo);
     } else if (t.classList.contains("debt-addmore")) {
       const d = debts[id];
       if (!d) return;
@@ -1553,9 +1597,10 @@
       return itemsRef.child(id).update({ qty: it.qty - c.qty, lastBy: staffName || "Nomaʼlum", updatedAt: now });
     });
     const itemsSummary = rows.map(([, c]) => `${c.name} x${c.qty}`).join(", ");
+    const itemsDetail = rows.map(([, c]) => ({ name: c.name, qty: c.qty, price: c.price }));
     const debtId = uid();
     const debtSave = debtsRef.child(debtId).set({
-      customerName: name, phone, address, amount: total, items: itemsSummary,
+      customerName: name, phone, address, amount: total, items: itemsSummary, itemsDetail,
       dueDate, dateGiven: now, paid: false, addedBy: staffName || "Nomaʼlum"
     });
     // Qarzga berilgan tovar ham "Sotildi" tarixiga yoziladi (tovar ombordan chiqdi hisoblanadi)
@@ -1577,6 +1622,61 @@
       setTimeout(() => window.print(), 150);
     }).catch((e) => { errBox.textContent = e.message; errBox.style.display = "block"; });
   });
+
+  // ======================================================================
+  // BUYURTMALAR TARIXI — to'langan (naqd) buyurtmalar, rasm shaklida ko'rish
+  // ======================================================================
+  function renderOrderHistory() {
+    const list = Object.entries(orderHistory).map(([id, o]) => ({ id, ...o }))
+      .sort((a, b) => (b.date || 0) - (a.date || 0));
+
+    const totalSum = list.reduce((s, o) => s + (o.total || 0), 0);
+    el("orderHistTotal").textContent = fmt(totalSum);
+
+    const empty = el("orderHistEmptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = "Hali toʻlangan buyurtma yoʻq.";
+      el("orderHistTableBody").innerHTML = "";
+      el("orderHistCardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    const itemsCountLabel = (o) => `${(o.itemsDetail || []).length} xil tovar`;
+
+    el("orderHistTableBody").innerHTML = list.map((o) => `
+      <tr data-id="${o.id}">
+        <td>${fmtDateTime(o.date)}</td>
+        <td>${escapeHtml(o.addedBy || "—")}</td>
+        <td>${itemsCountLabel(o)}</td>
+        <td class="mf" style="color:var(--green); font-weight:600;">${fmt(o.total)}</td>
+        <td><button class="icon-btn order-view" data-id="${o.id}" title="Roʻyxatni koʻrish">🖼️</button></td>
+      </tr>`).join("");
+
+    el("orderHistCardList").innerHTML = list.map((o) => `
+      <div class="item-card" data-id="${o.id}">
+        <div class="row1">
+          <div class="name">${itemsCountLabel(o)}</div>
+          <span class="mf" style="color:var(--green); font-weight:600;">${fmt(o.total)}</span>
+        </div>
+        <div class="meta-line">${fmtDateTime(o.date)} · ${escapeHtml(o.addedBy || "—")}</div>
+        <div class="actions">
+          <button class="icon-btn order-view" data-id="${o.id}" title="Roʻyxatni koʻrish">🖼️ Koʻrish</button>
+        </div>
+      </div>`).join("");
+  }
+
+  function handleOrderHistClick(e) {
+    const t = e.target.closest(".order-view");
+    if (!t) return;
+    const o = orderHistory[t.dataset.id];
+    if (!o || !o.itemsDetail) return;
+    const rows = o.itemsDetail.map((it) => [it.name, it]);
+    captureReceiptAsImage(rows, o.total);
+  }
+  el("orderHistTableBody").addEventListener("click", handleOrderHistClick);
+  el("orderHistCardList").addEventListener("click", handleOrderHistClick);
 
   renderCart();
 </script>
