@@ -275,7 +275,7 @@
       <div class="card-title">Yangi tovar qoʻshish</div>
       <div class="form-grid">
         <div class="field"><label>Nomi</label><input id="addName" placeholder="Masalan: Choy Beta" /></div>
-        <div class="field"><label>Miqdori</label><input id="addQty" class="mf" inputmode="numeric" placeholder="0" /></div>
+        <div class="field"><label>Soni</label><input id="addQty" class="mf" inputmode="numeric" placeholder="0" /></div>
         <div class="field"><label>Ulgurchi narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
       </div>
@@ -286,13 +286,13 @@
   <!-- Yuk keldi -->
   <div class="tab-panel" id="panel-restock">
     <div class="card">
-      <div class="card-title">Yuk keldi — miqdorga qoʻshish</div>
+      <div class="card-title">Yuk keldi — soniga qoʻshish</div>
       <div class="form-grid">
         <div class="field" style="grid-column: span 2;">
           <label>Tovarni tanlang</label>
           <select id="restockSelect"></select>
         </div>
-        <div class="field"><label>Qoʻshiladigan miqdor</label><input id="restockQty" class="mf" inputmode="numeric" placeholder="0" /></div>
+        <div class="field"><label>Qoʻshiladigan soni</label><input id="restockQty" class="mf" inputmode="numeric" placeholder="0" /></div>
       </div>
       <button class="btn btn-primary" id="restockBtn">Qoʻshib qoʻyish</button>
     </div>
@@ -303,7 +303,7 @@
     <div class="card">
       <div class="card-title">Qanday sotish kerak?</div>
       <p style="font-size:13px; color:var(--text-mute); margin:0;">
-        <strong>"Roʻyxat"</strong> boʻlimiga oʻting, kerakli tovar yonidagi <strong>🛒 Sotish</strong> tugmasini bosing — miqdor va narxni shu yerda soʻraydi.
+        <strong>"Roʻyxat"</strong> boʻlimiga oʻting, kerakli tovar yonidagi <strong>🛒 Sotish</strong> tugmasini bosing — soni va narxni shu yerda soʻraydi.
       </p>
     </div>
 
@@ -320,10 +320,11 @@
         <select id="saleMonthSelect"></select>
       </div>
     </div>
+    <button class="btn btn-danger" id="saleClearAllBtn" style="margin-bottom:14px;">🗑 Hammasini oʻchirish</button>
 
     <table>
       <thead>
-        <tr><th>Tovar</th><th>Miqdor</th><th>Narxi</th><th>Jami</th><th>Sana</th><th>Kim sotgan</th></tr>
+        <tr><th>Tovar</th><th>Soni</th><th>Narxi</th><th>Jami</th><th>Sana</th><th>Kim sotgan</th><th></th></tr>
       </thead>
       <tbody id="saleTableBody"></tbody>
     </table>
@@ -395,6 +396,8 @@
       <button class="btn btn-primary" id="debtAddBtn">Qoʻshish</button>
     </div>
 
+    <button class="btn btn-danger" id="debtClearAllBtn" style="margin-bottom:14px;">🗑 Hammasini oʻchirish</button>
+
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><th>Ismi</th><th>Telefon</th><th>Manzil</th><th>Summa</th><th>Oxirgi sana</th><th>Muddat</th><th>Holati</th><th></th></tr></thead>
@@ -413,6 +416,7 @@
         <div class="value" id="orderHistTotal" style="color: var(--green);">0</div>
       </div>
     </div>
+    <button class="btn btn-danger" id="orderHistClearAllBtn" style="margin-bottom:14px;">🗑 Hammasini oʻchirish</button>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><th>Sana</th><th>Xodim</th><th>Tovarlar</th><th>Jami</th><th></th></tr></thead>
@@ -448,6 +452,7 @@
         <select id="expMonthSelect"></select>
       </div>
     </div>
+    <button class="btn btn-danger" id="expClearAllBtn" style="margin-bottom:14px;">🗑 Hammasini oʻchirish</button>
 
     <table>
       <thead>
@@ -481,7 +486,7 @@
     <table>
       <thead>
         <tr>
-          <th>Nomi</th><th>Miqdor</th><th>Ulgurchi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
+          <th>Nomi</th><th>Soni</th><th>Ulgurchi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -537,7 +542,7 @@
     <p id="sellModalStock" style="margin-bottom:14px;"></p>
     <div class="field" style="margin-bottom:10px;">
       <label>Nechta sotasiz?</label>
-      <input id="sellQtyInput" class="mf" inputmode="numeric" placeholder="Miqdor" />
+      <input id="sellQtyInput" class="mf" inputmode="numeric" placeholder="Soni" />
     </div>
     <div class="field" style="margin-bottom:6px;">
       <label>Qanchaga sotasiz? (bir donasi)</label>
@@ -823,7 +828,7 @@
           <div class="name">${escapeHtml(it.name)}</div>
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
-        <div class="prices">Miqdor: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
+        <div class="prices">Soni: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
         <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         <div class="actions">${actions}</div>
       </div>`;
@@ -832,7 +837,7 @@
   function editRowHtml(it, tag, colspan) {
     const inner = `
       <input class="edit-name" value="${escapeHtml(it.name)}" placeholder="Nomi" style="margin-bottom:4px;width:100%;" />
-      <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Miqdor" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Soni" style="margin-bottom:4px;width:100%;" />
       <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Ulgurchi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
       <button class="btn btn-primary save-edit" style="margin-top:0;">Saqlash</button>
@@ -849,7 +854,7 @@
     const wholesale = parseFloat(el("addWholesale").value);
     const retail = parseFloat(el("addRetail").value);
     if (!name) return showError("Tovar nomini kiriting.");
-    if (isNaN(qty) || qty < 0) return showError("Miqdorni toʻgʻri kiriting.");
+    if (isNaN(qty) || qty < 0) return showError("Sonini toʻgʻri kiriting.");
     if (isNaN(wholesale) || wholesale < 0) return showError("Ulgurchi narxni toʻgʻri kiriting.");
     if (isNaN(retail) || retail < 0) return showError("Dona narxni toʻgʻri kiriting.");
     showError("");
@@ -869,7 +874,7 @@
     const id = el("restockSelect").value;
     const addQty = parseInt(el("restockQty").value, 10);
     if (!id) return showError("Tovarni tanlang.");
-    if (isNaN(addQty) || addQty <= 0) return showError("Miqdorni toʻgʻri kiriting.");
+    if (isNaN(addQty) || addQty <= 0) return showError("Sonini toʻgʻri kiriting.");
     showError("");
     const cur = items[id];
     itemsRef.child(id).update({
@@ -910,7 +915,7 @@
     const errBox = el("sellModalError");
 
     if (!it) { errBox.textContent = "Tovar topilmadi."; errBox.style.display = "block"; return; }
-    if (isNaN(qty) || qty <= 0) { errBox.textContent = "Miqdorni toʻgʻri kiriting."; errBox.style.display = "block"; return; }
+    if (isNaN(qty) || qty <= 0) { errBox.textContent = "Sonini toʻgʻri kiriting."; errBox.style.display = "block"; return; }
     if (qty > (it.qty || 0)) { errBox.textContent = `Omborda faqat ${it.qty} dona bor.`; errBox.style.display = "block"; return; }
     if (isNaN(price) || price <= 0) { errBox.textContent = "Narxni toʻgʻri kiriting."; errBox.style.display = "block"; return; }
     errBox.style.display = "none";
@@ -1188,6 +1193,13 @@
   el("expTableBody").addEventListener("click", handleExpenseClick);
   el("expCardList").addEventListener("click", handleExpenseClick);
 
+  el("expClearAllBtn").addEventListener("click", () => {
+    if (Object.keys(expenses).length === 0) { showError("Rasxodlar tarixi allaqachon boʻsh."); return; }
+    if (confirm("BARCHA rasxodlarni oʻchirmoqchimisiz? Bu amalni ortga qaytarib boʻlmaydi.")) {
+      expensesRef.remove().then(() => showStatus("Rasxodlar tozalandi ✓")).catch((e) => showError(e.message));
+    }
+  });
+
   // ======================================================================
   // SOTUVLAR TARIXI — tovarlar va rasxodlardan mustaqil (Firebase "sales")
   // ======================================================================
@@ -1222,24 +1234,43 @@
     empty.style.display = "none";
 
     el("saleTableBody").innerHTML = list.map((s) => `
-      <tr>
+      <tr data-id="${s.id}">
         <td>${escapeHtml(s.itemName)}${s.isDebt ? ` <span class="badge off" style="margin-left:4px;">Qarz</span>` : ""}</td>
         <td class="mf">${s.qty}</td>
         <td class="mf">${fmt(s.unitPrice)}</td>
         <td class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</td>
         <td>${fmtDate(s.date)}</td>
         <td>${escapeHtml(s.addedBy || "—")}</td>
+        <td><button class="icon-btn del sale-delete" data-id="${s.id}">🗑</button></td>
       </tr>`).join("");
 
     el("saleCardList").innerHTML = list.map((s) => `
-      <div class="item-card">
+      <div class="item-card" data-id="${s.id}">
         <div class="row1">
           <div class="name">${escapeHtml(s.itemName)} × ${s.qty}${s.isDebt ? ` <span class="badge off" style="margin-left:4px;">Qarz</span>` : ""}</div>
           <span class="mf" style="color: var(--green); font-weight:600;">${fmt(s.total)}</span>
         </div>
         <div class="meta-line">${fmtDate(s.date)} · ${escapeHtml(s.addedBy || "—")}</div>
+        <div class="actions"><button class="icon-btn del sale-delete" data-id="${s.id}">🗑 Oʻchirish</button></div>
       </div>`).join("");
   }
+
+  function handleSaleClick(e) {
+    const t = e.target.closest(".sale-delete");
+    if (!t) return;
+    if (confirm("Ushbu sotuv yozuvini oʻchirmoqchimisiz?")) {
+      salesRef.child(t.dataset.id).remove().catch((e) => showError(e.message));
+    }
+  }
+  el("saleTableBody").addEventListener("click", handleSaleClick);
+  el("saleCardList").addEventListener("click", handleSaleClick);
+
+  el("saleClearAllBtn").addEventListener("click", () => {
+    if (Object.keys(sales).length === 0) { showError("Sotuvlar tarixi allaqachon boʻsh."); return; }
+    if (confirm("BARCHA sotuvlar tarixini oʻchirmoqchimisiz? Bu amalni ortga qaytarib boʻlmaydi.")) {
+      salesRef.remove().then(() => showStatus("Sotuvlar tarixi tozalandi ✓")).catch((e) => showError(e.message));
+    }
+  });
 
   el("saleMonthSelect").addEventListener("change", () => {
     selectedSaleMonth = el("saleMonthSelect").value;
@@ -1293,13 +1324,19 @@
   function addToCart(id) {
     const it = items[id];
     if (!it) return;
-    const qtyStr = window.prompt(`"${it.name}" — nechta qoʻshmoqchisiz?`, "1");
+    const qtyStr = window.prompt(`"${it.name}" — sonini kiriting:`, "1");
     if (qtyStr === null) return; // bekor qilindi
     const qty = parseInt(qtyStr, 10);
-    if (isNaN(qty) || qty <= 0) { showError("Miqdorni toʻgʻri kiriting."); return; }
+    if (isNaN(qty) || qty <= 0) { showError("Sonini toʻgʻri kiriting."); return; }
+
+    const priceStr = window.prompt(`"${it.name}" — narxini kiriting:`, String(it.retail));
+    if (priceStr === null) return; // bekor qilindi
+    const price = parseFloat(priceStr);
+    if (isNaN(price) || price <= 0) { showError("Narxni toʻgʻri kiriting."); return; }
+
     showError("");
-    if (cart[id]) cart[id].qty += qty;
-    else cart[id] = { name: it.name, qty, price: it.retail };
+    if (cart[id]) { cart[id].qty += qty; cart[id].price = price; }
+    else cart[id] = { name: it.name, qty, price };
     renderCart();
   }
 
@@ -1585,6 +1622,13 @@
   el("debtFilterOverdue").addEventListener("click", () => applyDebtFilter("overdue"));
   el("debtFilterNotdue").addEventListener("click", () => applyDebtFilter("notdue"));
 
+  el("debtClearAllBtn").addEventListener("click", () => {
+    if (Object.keys(debts).length === 0) { showError("Qarzdorlar roʻyxati allaqachon boʻsh."); return; }
+    if (confirm("BARCHA qarzdorlar yozuvini oʻchirmoqchimisiz? Bu amalni ortga qaytarib boʻlmaydi.")) {
+      debtsRef.remove().then(() => showStatus("Qarzdorlar roʻyxati tozalandi ✓")).catch((e) => showError(e.message));
+    }
+  });
+
   el("debtAddBtn").addEventListener("click", () => {
     const name = el("debtName").value.trim();
     const phone = el("debtPhone").value.trim();
@@ -1700,7 +1744,10 @@
         <td>${escapeHtml(o.addedBy || "—")}</td>
         <td>${itemsCountLabel(o)}</td>
         <td class="mf" style="color:var(--green); font-weight:600;">${fmt(o.total)}</td>
-        <td><button class="icon-btn order-view" data-id="${o.id}" title="Roʻyxatni koʻrish">🖼️</button></td>
+        <td>
+          <button class="icon-btn order-view" data-id="${o.id}" title="Roʻyxatni koʻrish">🖼️</button>
+          <button class="icon-btn del order-delete" data-id="${o.id}">🗑</button>
+        </td>
       </tr>`).join("");
 
     el("orderHistCardList").innerHTML = list.map((o) => `
@@ -1712,20 +1759,34 @@
         <div class="meta-line">${fmtDateTime(o.date)} · ${escapeHtml(o.addedBy || "—")}</div>
         <div class="actions">
           <button class="icon-btn order-view" data-id="${o.id}" title="Roʻyxatni koʻrish">🖼️ Koʻrish</button>
+          <button class="icon-btn del order-delete" data-id="${o.id}">🗑 Oʻchirish</button>
         </div>
       </div>`).join("");
   }
 
   function handleOrderHistClick(e) {
-    const t = e.target.closest(".order-view");
-    if (!t) return;
-    const o = orderHistory[t.dataset.id];
-    if (!o || !o.itemsDetail) return;
-    const rows = o.itemsDetail.map((it) => [it.name, it]);
-    captureReceiptAsImage(rows, o.total);
+    const viewBtn = e.target.closest(".order-view");
+    const delBtn = e.target.closest(".order-delete");
+    if (viewBtn) {
+      const o = orderHistory[viewBtn.dataset.id];
+      if (!o || !o.itemsDetail) return;
+      const rows = o.itemsDetail.map((it) => [it.name, it]);
+      captureReceiptAsImage(rows, o.total);
+    } else if (delBtn) {
+      if (confirm("Ushbu buyurtma yozuvini oʻchirmoqchimisiz?")) {
+        ordersRef.child(delBtn.dataset.id).remove().catch((e) => showError(e.message));
+      }
+    }
   }
   el("orderHistTableBody").addEventListener("click", handleOrderHistClick);
   el("orderHistCardList").addEventListener("click", handleOrderHistClick);
+
+  el("orderHistClearAllBtn").addEventListener("click", () => {
+    if (Object.keys(orderHistory).length === 0) { showError("Buyurtmalar tarixi allaqachon boʻsh."); return; }
+    if (confirm("BARCHA toʻlangan buyurtmalar tarixini oʻchirmoqchimisiz? Bu amalni ortga qaytarib boʻlmaydi.")) {
+      ordersRef.remove().then(() => showStatus("Buyurtmalar tarixi tozalandi ✓")).catch((e) => showError(e.message));
+    }
+  });
 
   renderCart();
 </script>
