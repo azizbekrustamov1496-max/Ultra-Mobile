@@ -254,8 +254,7 @@
     <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
     <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
     <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
-    <div class="stat-box"><div class="label">Ombor qiymati (tannarx)</div><div class="value" id="statValue">0</div></div>
-    <div class="stat-box"><div class="label">Sotilsa tushadigan pul</div><div class="value" id="statRetailValue" style="color: var(--green);">0</div></div>
+    <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
   </div>
 
   <div class="tabs">
@@ -276,7 +275,7 @@
       <div class="form-grid">
         <div class="field"><label>Nomi</label><input id="addName" placeholder="Masalan: Choy Beta" /></div>
         <div class="field"><label>Soni</label><input id="addQty" class="mf" inputmode="numeric" placeholder="0" /></div>
-        <div class="field"><label>Ulgurchi narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Tan narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
       </div>
       <button class="btn btn-primary" id="addBtn">Qoʻshish</button>
@@ -486,7 +485,7 @@
     <table>
       <thead>
         <tr>
-          <th>Nomi</th><th>Soni</th><th>Ulgurchi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
+          <th>Nomi</th><th>Soni</th><th>Tan narx</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -738,12 +737,10 @@
     const ok = list.filter((it) => it.qty > 0).length;
     const out = total - ok;
     const value = list.reduce((sum, it) => sum + (it.qty || 0) * (it.wholesale || 0), 0);
-    const retailValue = list.reduce((sum, it) => sum + (it.qty || 0) * (it.retail || 0), 0);
     el("statTotal").textContent = total;
     el("statOk").textContent = ok;
     el("statOut").textContent = out;
     el("statValue").textContent = fmt(value);
-    el("statRetailValue").textContent = fmt(retailValue);
   }
 
   function renderSelects() {
@@ -828,7 +825,7 @@
           <div class="name">${escapeHtml(it.name)}</div>
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
-        <div class="prices">Soni: ${it.qty} · Ulgurchi: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
+        <div class="prices">Soni: ${it.qty} · Tan narx: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
         <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         <div class="actions">${actions}</div>
       </div>`;
@@ -838,7 +835,7 @@
     const inner = `
       <input class="edit-name" value="${escapeHtml(it.name)}" placeholder="Nomi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Soni" style="margin-bottom:4px;width:100%;" />
-      <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Ulgurchi" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Tan narx" style="margin-bottom:4px;width:100%;" />
       <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
       <button class="btn btn-primary save-edit" style="margin-top:0;">Saqlash</button>
       <button class="btn btn-ghost cancel-edit" style="margin-top:0;">Bekor qilish</button>`;
@@ -855,7 +852,7 @@
     const retail = parseFloat(el("addRetail").value);
     if (!name) return showError("Tovar nomini kiriting.");
     if (isNaN(qty) || qty < 0) return showError("Sonini toʻgʻri kiriting.");
-    if (isNaN(wholesale) || wholesale < 0) return showError("Ulgurchi narxni toʻgʻri kiriting.");
+    if (isNaN(wholesale) || wholesale < 0) return showError("Tan narxni toʻgʻri kiriting.");
     if (isNaN(retail) || retail < 0) return showError("Dona narxni toʻgʻri kiriting.");
     showError("");
 
@@ -1324,12 +1321,12 @@
   function addToCart(id) {
     const it = items[id];
     if (!it) return;
-    const qtyStr = window.prompt(`"${it.name}" — sonini kiriting:`, "1");
+    const qtyStr = window.prompt(`"${it.name}" — sonini kiriting:`, "");
     if (qtyStr === null) return; // bekor qilindi
     const qty = parseInt(qtyStr, 10);
     if (isNaN(qty) || qty <= 0) { showError("Sonini toʻgʻri kiriting."); return; }
 
-    const priceStr = window.prompt(`"${it.name}" — narxini kiriting:`, String(it.retail));
+    const priceStr = window.prompt(`"${it.name}" — narxini kiriting (tan narxi: ${it.wholesale}):`, String(it.wholesale));
     if (priceStr === null) return; // bekor qilindi
     const price = parseFloat(priceStr);
     if (isNaN(price) || price <= 0) { showError("Narxni toʻgʻri kiriting."); return; }
