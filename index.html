@@ -55,19 +55,75 @@
   .topbar {
     background: linear-gradient(135deg, var(--navy), var(--navy-dark));
     color: #fff; padding: 16px 22px;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
     box-shadow: 0 2px 10px rgba(11,61,102,0.25);
+    position: sticky; top: 0; z-index: 40;
   }
-  .topbar h1 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: 0.2px; }
+  .topbar h1 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: 0.2px; flex: 1; }
   .topbar .right { display: flex; align-items: center; gap: 14px; font-size: 13px; }
-  .theme-btn {
+  .theme-btn, .hamburger-btn {
     background: rgba(255,255,255,0.15); border: none; color: #fff; width: 32px; height: 32px;
     border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background .15s;
+    transition: background .15s; flex-shrink: 0;
   }
-  .theme-btn:hover { background: rgba(255,255,255,0.28); }
+  .theme-btn:hover, .hamburger-btn:hover { background: rgba(255,255,255,0.28); }
 
-  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 90px; }
+
+  /* Chap tomondan chiqadigan menyu (drawer) */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90;
+    display: flex; align-items: stretch;
+  }
+  .drawer-panel {
+    background: var(--card); width: 260px; max-width: 78vw; height: 100%;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+    display: flex; flex-direction: column; padding: 8px 0;
+    animation: drawerIn .18s ease;
+  }
+  @keyframes drawerIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; font-size: 13px; font-weight: 700; color: var(--text-mute);
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+  }
+  .drawer-item {
+    display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+    background: none; border: none; padding: 14px 18px; font-size: 15px; color: var(--text);
+    cursor: pointer; transition: background .15s; font-family: 'Inter', sans-serif;
+  }
+  .drawer-item:hover { background: var(--bg); }
+  .drawer-item svg { flex-shrink: 0; color: var(--text-mute); }
+
+  /* Pastki menyu */
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-around;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+    transition: transform .25s ease;
+  }
+  .bottom-nav.hide-nav { transform: translateY(100%); }
+  .bottom-nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; padding: 6px 2px; cursor: pointer;
+    color: var(--text-mute); font-size: 10.5px; font-family: 'Inter', sans-serif; font-weight: 600;
+    transition: color .15s;
+  }
+  .bottom-nav-btn.active { color: var(--green); }
+  .bottom-nav-btn span { white-space: nowrap; }
+  .bottom-nav-mid {
+    position: relative; top: -14px;
+  }
+  .bottom-nav-mid svg {
+    background: linear-gradient(135deg, var(--green), var(--green-dark));
+    color: #fff; border-radius: 50%; padding: 10px; width: 46px; height: 46px; box-sizing: border-box;
+    box-shadow: 0 3px 10px rgba(30,158,90,0.4);
+  }
+  .bottom-nav-mid.active svg { box-shadow: 0 3px 14px rgba(30,158,90,0.6); }
+  .bottom-nav-mid span { margin-top: 1px; }
+
 
   .banner { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; display: none; }
   .banner.error { background: var(--bad-bg); border: 1px solid var(--bad-border); color: var(--bad-text); }
@@ -197,7 +253,7 @@
 
   @media print {
     @page { margin: 10mm; }
-    #codeModal, #nameModal, .topbar, .wrap, #imagePreviewModal, #sellModal { display: none !important; }
+    #codeModal, #nameModal, .topbar, .wrap, #imagePreviewModal, #sellModal, .bottom-nav, .drawer-overlay { display: none !important; }
     #printReceipt {
       display: block !important; position: static; width: 100%;
       padding: 0; color: #000; font-family: 'Inter', sans-serif;
@@ -234,10 +290,41 @@
 </div>
 
 <div class="topbar">
+  <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menyu">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <h1>Ultra Mobile</h1>
   <div class="right">
     <span id="staffLabel"></span>
     <button class="theme-btn" id="themeToggle" title="Rejimni almashtirish">🌙</button>
+  </div>
+</div>
+
+<!-- Chap tomondan chiqadigan menyu -->
+<div class="drawer-overlay" id="drawerOverlay" style="display:none;">
+  <div class="drawer-panel" id="drawerPanel">
+    <div class="drawer-header">
+      <span>Boshqa boʻlimlar</span>
+      <button class="icon-btn" id="drawerClose">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <button class="drawer-item tab-btn" data-tab="add">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <span>Yangi tovar</span>
+    </button>
+    <button class="drawer-item tab-btn" data-tab="restock">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+      <span>Yuk keldi</span>
+    </button>
+    <button class="drawer-item tab-btn" data-tab="expenses">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/></svg>
+      <span>Rasxodlar</span>
+    </button>
+    <button class="drawer-item tab-btn" data-tab="recent">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+      <span>Oxirgi qoʻshilganlar</span>
+    </button>
   </div>
 </div>
 
@@ -257,16 +344,7 @@
     <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="list">Roʻyxat</button>
-    <button class="tab-btn" data-tab="add">➕ Yangi tovar</button>
-    <button class="tab-btn" data-tab="restock">📦 Yuk keldi</button>
-    <button class="tab-btn" data-tab="sale">🛒 Sotildi</button>
-    <button class="tab-btn" data-tab="expenses">💸 Rasxodlar</button>
-    <button class="tab-btn" data-tab="order">📋 Buyurtma</button>
-    <button class="tab-btn" data-tab="debts">🧾 Qarzdorlar</button>
-    <button class="tab-btn" data-tab="orderhistory">✅ Toʻlanganlar</button>
-  </div>
+
 
   <!-- Yangi tovar qo'shish -->
   <div class="tab-panel" id="panel-add">
@@ -276,6 +354,7 @@
         <div class="field"><label>Nomi</label><input id="addName" placeholder="Masalan: Choy Beta" /></div>
         <div class="field"><label>Soni</label><input id="addQty" class="mf" inputmode="numeric" placeholder="0" /></div>
         <div class="field"><label>Tan narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Ulgurchi narxi</label><input id="addBulk" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
       </div>
       <button class="btn btn-primary" id="addBtn">Qoʻshish</button>
@@ -485,7 +564,7 @@
     <table>
       <thead>
         <tr>
-          <th>Nomi</th><th>Soni</th><th>Tan narx</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
+          <th>Nomi</th><th>Soni</th><th>Tan narx</th><th>Ulgurchi narxi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -495,7 +574,43 @@
     <div id="emptyState" class="empty" style="display:none;"></div>
   </div>
 
+  <!-- Oxirgi qo'shilgan narsalar -->
+  <div class="tab-panel" id="panel-recent">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Nomi</th><th>Soni</th><th>Dona narxi</th><th>Qoʻshilgan sana</th></tr></thead>
+        <tbody id="recentTableBody"></tbody>
+      </table>
+    </div>
+    <div id="recentCardList"></div>
+    <div id="recentEmptyState" class="empty" style="display:none;"></div>
+  </div>
+
 </div>
+
+<!-- Pastki menyu -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bottom-nav-btn tab-btn active" data-tab="list">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    <span>Uy</span>
+  </button>
+  <button class="bottom-nav-btn tab-btn" data-tab="sale">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h15l-1.5 9h-12z"/><path d="M4 3H2"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>
+    <span>Sotildi</span>
+  </button>
+  <button class="bottom-nav-btn bottom-nav-mid tab-btn" data-tab="order">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span>Buyurtma</span>
+  </button>
+  <button class="bottom-nav-btn tab-btn" data-tab="debts">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H4z"/><path d="M4 4v16"/><line x1="14" y1="12" x2="17" y2="12"/></svg>
+    <span>Qarzdorlar</span>
+  </button>
+  <button class="bottom-nav-btn tab-btn" data-tab="orderhistory">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    <span>Toʻlanganlar</span>
+  </button>
+</nav>
 
 <div id="printReceipt" style="display:none;"></div>
 
@@ -690,8 +805,64 @@
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
       btn.classList.add("active");
       el("panel-" + btn.dataset.tab).classList.add("active");
+      closeDrawer();
+      window.scrollTo({ top: 0, behavior: "instant" });
     });
   });
+
+  // ---- Chap tomondan chiqadigan menyu (drawer) ----
+  function openDrawer() { el("drawerOverlay").style.display = "flex"; }
+  function closeDrawer() { el("drawerOverlay").style.display = "none"; }
+  el("hamburgerBtn").addEventListener("click", openDrawer);
+  el("drawerClose").addEventListener("click", closeDrawer);
+  el("drawerOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "drawerOverlay") closeDrawer();
+  });
+
+  // ---- Pastki menyu: skroll qilinganda yashirish/ko'rsatish ----
+  let lastScrollY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const cur = window.scrollY;
+    const nav = el("bottomNav");
+    if (cur > lastScrollY && cur > 80) nav.classList.add("hide-nav");
+    else nav.classList.remove("hide-nav");
+    lastScrollY = cur;
+  }, { passive: true });
+
+  // ---- Oxirgi qo'shilgan narsalar ----
+  function renderRecent() {
+    const list = Object.values(items)
+      .filter((it) => it.createdAt)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .slice(0, 50);
+
+    const empty = el("recentEmptyState");
+    if (list.length === 0) {
+      empty.style.display = "block";
+      empty.textContent = "Hali tovar qoʻshilmagan.";
+      el("recentTableBody").innerHTML = "";
+      el("recentCardList").innerHTML = "";
+      return;
+    }
+    empty.style.display = "none";
+
+    el("recentTableBody").innerHTML = list.map((it) => `
+      <tr>
+        <td>${escapeHtml(it.name)}</td>
+        <td class="mf">${it.qty}</td>
+        <td class="mf">${fmt(it.retail)}</td>
+        <td>${fmtDateTime(it.createdAt)}</td>
+      </tr>`).join("");
+
+    el("recentCardList").innerHTML = list.map((it) => `
+      <div class="item-card">
+        <div class="row1">
+          <div class="name">${escapeHtml(it.name)}</div>
+          <span class="mf">${fmt(it.retail)}</span>
+        </div>
+        <div class="meta-line">Soni: ${it.qty} · Qoʻshilgan: ${fmtDateTime(it.createdAt)}</div>
+      </div>`).join("");
+  }
 
   // ---- Firebase listener ----
   if (itemsRef) {
@@ -729,6 +900,7 @@
     renderStats();
     renderSelects();
     renderList();
+    renderRecent();
   }
 
   function renderStats() {
@@ -787,7 +959,7 @@
   }
 
   function rowHtml(it) {
-    if (editId === it.id) return editRowHtml(it, "tr", 7);
+    if (editId === it.id) return editRowHtml(it, "tr", 8);
     const inStock = it.qty > 0;
     const sel = selectedIds.has(it.id);
     const actionsCell = selectMode
@@ -800,6 +972,7 @@
         <td>${escapeHtml(it.name)}</td>
         <td class="mf">${it.qty}</td>
         <td class="mf">${fmt(it.wholesale)}</td>
+        <td class="mf">${fmt(it.bulkPrice || 0)}</td>
         <td class="mf">${fmt(it.retail)}</td>
         <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span></td>
         <td>
@@ -825,7 +998,7 @@
           <div class="name">${escapeHtml(it.name)}</div>
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
-        <div class="prices">Soni: ${it.qty} · Tan narx: ${fmt(it.wholesale)} · Dona: ${fmt(it.retail)}</div>
+        <div class="prices">Soni: ${it.qty} · Tan narx: ${fmt(it.wholesale)} · Ulgurchi: ${fmt(it.bulkPrice || 0)} · Dona: ${fmt(it.retail)}</div>
         <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         <div class="actions">${actions}</div>
       </div>`;
@@ -836,6 +1009,7 @@
       <input class="edit-name" value="${escapeHtml(it.name)}" placeholder="Nomi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Soni" style="margin-bottom:4px;width:100%;" />
       <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Tan narx" style="margin-bottom:4px;width:100%;" />
+      <input class="edit-bulk mf" value="${it.bulkPrice || 0}" inputmode="decimal" placeholder="Ulgurchi narxi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
       <button class="btn btn-primary save-edit" style="margin-top:0;">Saqlash</button>
       <button class="btn btn-ghost cancel-edit" style="margin-top:0;">Bekor qilish</button>`;
@@ -849,19 +1023,21 @@
     const name = el("addName").value.trim();
     const qty = parseInt(el("addQty").value, 10);
     const wholesale = parseFloat(el("addWholesale").value);
+    const bulkPrice = parseFloat(el("addBulk").value);
     const retail = parseFloat(el("addRetail").value);
     if (!name) return showError("Tovar nomini kiriting.");
     if (isNaN(qty) || qty < 0) return showError("Sonini toʻgʻri kiriting.");
     if (isNaN(wholesale) || wholesale < 0) return showError("Tan narxni toʻgʻri kiriting.");
+    if (isNaN(bulkPrice) || bulkPrice < 0) return showError("Ulgurchi narxni toʻgʻri kiriting.");
     if (isNaN(retail) || retail < 0) return showError("Dona narxni toʻgʻri kiriting.");
     showError("");
 
     const id = uid();
     itemsRef.child(id).set({
-      name, qty, wholesale, retail,
+      name, qty, wholesale, bulkPrice, retail,
       lastBy: staffName || "Nomaʼlum", updatedAt: Date.now(), createdAt: Date.now()
     }).then(() => {
-      el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addRetail").value = "";
+      el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addBulk").value = ""; el("addRetail").value = "";
       showStatus("Qoʻshildi ✓");
     }).catch((e) => showError(e.message));
   });
@@ -967,13 +1143,14 @@
       const name = scope.querySelector(".edit-name").value.trim();
       const qty = parseInt(scope.querySelector(".edit-qty").value, 10);
       const wholesale = parseFloat(scope.querySelector(".edit-wholesale").value);
+      const bulkPrice = parseFloat(scope.querySelector(".edit-bulk").value);
       const retail = parseFloat(scope.querySelector(".edit-retail").value);
-      if (!name || isNaN(qty) || qty < 0 || isNaN(wholesale) || isNaN(retail)) {
+      if (!name || isNaN(qty) || qty < 0 || isNaN(wholesale) || isNaN(bulkPrice) || isNaN(retail)) {
         showError("Maʼlumotlarni toʻgʻri kiriting."); return;
       }
       showError("");
       itemsRef.child(id).update({
-        name, qty, wholesale, retail, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+        name, qty, wholesale, bulkPrice, retail, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
       }).then(() => { editId = null; }).catch((e) => showError(e.message));
     }
   }
@@ -1326,7 +1503,7 @@
     const qty = parseInt(qtyStr, 10);
     if (isNaN(qty) || qty <= 0) { showError("Sonini toʻgʻri kiriting."); return; }
 
-    const priceStr = window.prompt(`"${it.name}" — narxini kiriting (tan narxi: ${it.wholesale}):`, String(it.wholesale));
+    const priceStr = window.prompt(`"${it.name}" — narxini kiriting (ulgurchi narxi: ${it.bulkPrice || 0}):`, String(it.bulkPrice || 0));
     if (priceStr === null) return; // bekor qilindi
     const price = parseFloat(priceStr);
     if (isNaN(price) || price <= 0) { showError("Narxni toʻgʻri kiriting."); return; }
