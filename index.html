@@ -133,6 +133,20 @@
   .filter-box:hover { transform: translateY(-1px); }
   .filter-box.active-filter { border: 2px solid var(--accent); }
 
+  .category-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 12px; text-align: center; cursor: pointer; transition: transform .1s, border-color .15s;
+    box-shadow: 0 1px 4px rgba(20,40,60,0.05);
+  }
+  .category-card:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .category-card .cat-name { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .category-card .cat-count { font-size: 12px; color: var(--text-mute); }
+  .category-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--ok-bg);
+    border: 1px solid var(--ok-border); color: var(--ok-text); border-radius: 20px;
+    padding: 5px 10px 5px 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; cursor: pointer;
+  }
+
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .tab-btn {
     padding: 10px 16px; background: none; border: none; cursor: pointer; white-space: nowrap;
@@ -318,6 +332,10 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
       <span>Oxirgi qoʻshilganlar</span>
     </button>
+    <button class="drawer-item tab-btn" data-tab="categories">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Kategoriyalar</span>
+    </button>
   </div>
 </div>
 
@@ -329,13 +347,6 @@
 
   <div id="errorBanner" class="banner error"></div>
   <div id="statusBanner" class="banner status"></div>
-
-  <div class="stats-row">
-    <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
-    <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
-    <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
-    <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
-  </div>
 
 
 
@@ -349,6 +360,8 @@
         <div class="field"><label>Tan narxi</label><input id="addWholesale" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Ulgurchi narxi</label><input id="addBulk" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Kategoriya</label><input id="addCategory" list="categoryList" placeholder="Masalan: Telefon" /></div>
+        <datalist id="categoryList"></datalist>
       </div>
       <button class="btn btn-primary" id="addBtn">Qoʻshish</button>
     </div>
@@ -538,6 +551,13 @@
 
   <!-- Ro'yxat -->
   <div class="tab-panel active" id="panel-list">
+    <div class="stats-row">
+      <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
+      <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
+      <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
+    </div>
+
     <div id="selectionToolbar" style="display:none; align-items:center; gap:10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap;">
       <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
         <input type="checkbox" id="selectAllCheckbox" style="width:16px; height:16px;" />
@@ -553,7 +573,8 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input id="searchInput" placeholder="Tovarni qidirish..." />
     </div>
-    <div style="font-size:11px; color:var(--text-mute); margin:-8px 0 12px;">💡 Bir nechtasini tanlash uchun 🗑 belgisini bosib turing (~1 soniya)</div>
+    <div id="categoryPills" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:10px;"></div>
+    <div style="font-size:11px; color:var(--text-mute); margin:-4px 0 12px;">💡 Bir nechtasini tanlash uchun 🗑 belgisini bosib turing (~1 soniya)</div>
 
     <table>
       <thead>
@@ -578,6 +599,12 @@
     </div>
     <div id="recentCardList"></div>
     <div id="recentEmptyState" class="empty" style="display:none;"></div>
+  </div>
+
+  <!-- Kategoriyalar -->
+  <div class="tab-panel" id="panel-categories">
+    <div id="categoryGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;"></div>
+    <div id="categoryEmptyState" class="empty" style="display:none;">Hali hech qanday tovarga kategoriya belgilanmagan. "Yangi tovar" yoki tahrirlashda "Kategoriya" maydonini toʻldiring.</div>
   </div>
 
 </div>
@@ -842,7 +869,7 @@
   })();
 
   // ---- Barmoq bilan surib bo'lim almashtirish (swipe) ----
-  const swipeOrder = ["list", "add", "order", "debts", "orderhistory"];
+  const swipeOrder = ["list", "add", "restock", "expenses", "order", "debts", "orderhistory", "sale", "recent", "categories"];
   (function () {
     let sx = null, sy = null, swiping = false;
     document.addEventListener("touchstart", (e) => {
@@ -861,7 +888,7 @@
       if (curIdx === -1) return;
       let nextIdx = dx < 0 ? curIdx + 1 : curIdx - 1; // chapga surish -> keyingisi
       if (nextIdx < 0 || nextIdx >= swipeOrder.length) return;
-      const nextBtn = document.querySelector(`.bottom-nav-btn[data-tab="${swipeOrder[nextIdx]}"]`);
+      const nextBtn = document.querySelector(`.tab-btn[data-tab="${swipeOrder[nextIdx]}"]`);
       if (nextBtn) nextBtn.click();
     }, { passive: true });
   })();
@@ -947,6 +974,7 @@
     renderStats();
     renderList();
     renderRecent();
+    renderCategories();
   }
 
   function renderStats() {
@@ -969,6 +997,8 @@
   let longPressTimer = null;
   let longPressFired = false;
 
+  let categoryFilter = null; // null yoki kategoriya nomi
+
   function renderList() {
     const query = el("searchInput").value.trim().toLowerCase();
     const list = Object.entries(items)
@@ -979,7 +1009,10 @@
         if (stockFilter === "outstock") return it.qty <= 0;
         return true;
       })
+      .filter((it) => !categoryFilter || (it.category || "") === categoryFilter)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    renderCategoryPills();
 
     const empty = el("emptyState");
     if (list.length === 0) {
@@ -1006,7 +1039,7 @@
          <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>`;
     return `
       <tr data-id="${it.id}" class="${selectMode ? "selectable-row" : ""} ${sel ? "row-selected" : ""}">
-        <td>${escapeHtml(it.name)}</td>
+        <td>${escapeHtml(it.name)}${it.category ? `<div class="meta-line">🏷️ ${escapeHtml(it.category)}</div>` : ""}</td>
         <td class="mf">${it.qty}</td>
         <td class="mf">${fmt(it.wholesale)}</td>
         <td class="mf">${fmt(it.bulkPrice || 0)}</td>
@@ -1036,6 +1069,7 @@
           <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
         </div>
         <div class="prices">Soni: ${it.qty} · Tan narx: ${fmt(it.wholesale)} · Ulgurchi: ${fmt(it.bulkPrice || 0)} · Dona: ${fmt(it.retail)}</div>
+        ${it.category ? `<div class="meta-line">🏷️ ${escapeHtml(it.category)}</div>` : ""}
         <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
         <div class="actions">${actions}</div>
       </div>`;
@@ -1048,6 +1082,7 @@
       <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Tan narx" style="margin-bottom:4px;width:100%;" />
       <input class="edit-bulk mf" value="${it.bulkPrice || 0}" inputmode="decimal" placeholder="Ulgurchi narxi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-retail mf" value="${it.retail}" inputmode="decimal" placeholder="Dona narxi" style="margin-bottom:6px;width:100%;" />
+      <input class="edit-category" value="${escapeHtml(it.category || "")}" list="categoryList" placeholder="Kategoriya" style="margin-bottom:6px;width:100%;" />
       <button class="btn btn-primary save-edit" style="margin-top:0;">Saqlash</button>
       <button class="btn btn-ghost cancel-edit" style="margin-top:0;">Bekor qilish</button>`;
     if (tag === "tr") return `<tr data-id="${it.id}"><td colspan="${colspan}" style="padding:12px;">${inner}</td></tr>`;
@@ -1062,6 +1097,7 @@
     const wholesale = parseFloat(el("addWholesale").value);
     const bulkPrice = parseFloat(el("addBulk").value);
     const retail = parseFloat(el("addRetail").value);
+    const category = el("addCategory").value.trim();
     if (!name) return showError("Tovar nomini kiriting.");
     if (isNaN(qty) || qty < 0) return showError("Sonini toʻgʻri kiriting.");
     if (isNaN(wholesale) || wholesale < 0) return showError("Tan narxni toʻgʻri kiriting.");
@@ -1071,10 +1107,10 @@
 
     const id = uid();
     itemsRef.child(id).set({
-      name, qty, wholesale, bulkPrice, retail,
+      name, qty, wholesale, bulkPrice, retail, category,
       lastBy: staffName || "Nomaʼlum", updatedAt: Date.now(), createdAt: Date.now()
     }).then(() => {
-      el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addBulk").value = ""; el("addRetail").value = "";
+      el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addBulk").value = ""; el("addRetail").value = ""; el("addCategory").value = "";
       showStatus("Qoʻshildi ✓");
     }).catch((e) => showError(e.message));
   });
@@ -1222,12 +1258,13 @@
       const wholesale = parseFloat(scope.querySelector(".edit-wholesale").value);
       const bulkPrice = parseFloat(scope.querySelector(".edit-bulk").value);
       const retail = parseFloat(scope.querySelector(".edit-retail").value);
+      const category = scope.querySelector(".edit-category").value.trim();
       if (!name || isNaN(qty) || qty < 0 || isNaN(wholesale) || isNaN(bulkPrice) || isNaN(retail)) {
         showError("Maʼlumotlarni toʻgʻri kiriting."); return;
       }
       showError("");
       itemsRef.child(id).update({
-        name, qty, wholesale, bulkPrice, retail, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+        name, qty, wholesale, bulkPrice, retail, category, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
       }).then(() => { editId = null; }).catch((e) => showError(e.message));
     }
   }
@@ -1320,6 +1357,77 @@
   });
 
   el("searchInput").addEventListener("input", renderList);
+
+  // ---- Tezkor kategoriya tugmalari (pill) — Ro'yxat sahifasida ----
+  const DEFAULT_CATEGORIES = ["Laminat", "Gʻilof", "Shisha", "Quloqchin", "Zaryadlagich", "Kabel"];
+
+  function renderCategoryPills() {
+    const used = new Set();
+    Object.values(items).forEach((it) => { if (it.category) used.add(it.category.trim()); });
+    DEFAULT_CATEGORIES.forEach((c) => used.add(c));
+    const cats = Array.from(used).sort((a, b) => a.localeCompare(b, "uz"));
+
+    const pillHtml = (label, value, active) => `
+      <button class="cat-pill ${active ? "active" : ""}" data-cat="${escapeHtml(value || "")}"
+        style="flex-shrink:0; padding:7px 14px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer;
+        border:1px solid ${active ? "transparent" : "var(--border)"};
+        background:${active ? "var(--navy)" : "var(--card)"}; color:${active ? "#fff" : "var(--text)"};">
+        ${escapeHtml(label)}
+      </button>`;
+
+    el("categoryPills").innerHTML =
+      pillHtml("Hammasi", "", !categoryFilter) +
+      cats.map((c) => pillHtml(c, c, categoryFilter === c)).join("");
+  }
+
+  el("categoryPills").addEventListener("click", (e) => {
+    const btn = e.target.closest(".cat-pill");
+    if (!btn) return;
+    categoryFilter = btn.dataset.cat || null;
+    renderList();
+  });
+
+  // ---- Kategoriyalar boʻlimi ----
+  function renderCategories() {
+    const counts = {};
+    Object.values(items).forEach((it) => {
+      const cat = (it.category || "").trim();
+      if (!cat) return;
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    const cats = Object.keys(counts).sort((a, b) => a.localeCompare(b, "uz"));
+
+    const grid = el("categoryGrid");
+    const empty = el("categoryEmptyState");
+    if (cats.length === 0) {
+      grid.innerHTML = "";
+      empty.style.display = "block";
+      return;
+    }
+    empty.style.display = "none";
+    grid.innerHTML = cats.map((cat) => `
+      <div class="category-card" data-cat="${escapeHtml(cat)}">
+        <div class="cat-name">🏷️ ${escapeHtml(cat)}</div>
+        <div class="cat-count">${counts[cat]} ta tovar</div>
+      </div>`).join("");
+
+    // Kategoriya inputlari uchun datalist'ni to'ldirish (standart + mavjud kategoriyalar)
+    const allSuggested = Array.from(new Set([...DEFAULT_CATEGORIES, ...cats])).sort((a, b) => a.localeCompare(b, "uz"));
+    el("categoryList").innerHTML = allSuggested.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("");
+  }
+
+  el("categoryGrid").addEventListener("click", (e) => {
+    const card = e.target.closest(".category-card");
+    if (!card) return;
+    categoryFilter = card.dataset.cat;
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    document.querySelector('.tab-btn[data-tab="list"]').classList.add("active");
+    el("panel-list").classList.add("active");
+    closeDrawer();
+    renderList();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  });
 
   // ---- Statistika bloklari orqali filtrlash (Jami/Bor/Tugagan) ----
   function applyStockFilter(f) {
