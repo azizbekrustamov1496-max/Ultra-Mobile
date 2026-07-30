@@ -573,7 +573,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input id="searchInput" placeholder="Tovarni qidirish..." />
     </div>
-    <div id="categoryPills" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:10px;"></div>
     <div style="font-size:11px; color:var(--text-mute); margin:-4px 0 12px;">💡 Bir nechtasini tanlash uchun 🗑 belgisini bosib turing (~1 soniya)</div>
 
     <table>
@@ -869,7 +868,7 @@
   })();
 
   // ---- Barmoq bilan surib bo'lim almashtirish (swipe) ----
-  const swipeOrder = ["list", "add", "restock", "expenses", "order", "debts", "orderhistory", "sale", "recent", "categories"];
+  const swipeOrder = ["list", "add", "order", "debts", "orderhistory"];
   (function () {
     let sx = null, sy = null, swiping = false;
     document.addEventListener("touchstart", (e) => {
@@ -884,7 +883,15 @@
       if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       const activeBtn = document.querySelector(".tab-btn.active");
       if (!activeBtn) return;
-      const curIdx = swipeOrder.indexOf(activeBtn.dataset.tab);
+      const curTab = activeBtn.dataset.tab;
+
+      // "Uy"da chapga surilsa - tepadagi (☰) menyu ochiladi, foydalanuvchi o'zi tanlaydi
+      if (curTab === "list" && dx < 0) {
+        openDrawer();
+        return;
+      }
+
+      const curIdx = swipeOrder.indexOf(curTab);
       if (curIdx === -1) return;
       let nextIdx = dx < 0 ? curIdx + 1 : curIdx - 1; // chapga surish -> keyingisi
       if (nextIdx < 0 || nextIdx >= swipeOrder.length) return;
@@ -1012,7 +1019,6 @@
       .filter((it) => !categoryFilter || (it.category || "") === categoryFilter)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-    renderCategoryPills();
 
     const empty = el("emptyState");
     if (list.length === 0) {
@@ -1358,34 +1364,8 @@
 
   el("searchInput").addEventListener("input", renderList);
 
-  // ---- Tezkor kategoriya tugmalari (pill) — Ro'yxat sahifasida ----
-  const DEFAULT_CATEGORIES = ["Laminat", "Gʻilof", "Shisha", "Quloqchin", "Zaryadlagich", "Kabel"];
-
-  function renderCategoryPills() {
-    const used = new Set();
-    Object.values(items).forEach((it) => { if (it.category) used.add(it.category.trim()); });
-    DEFAULT_CATEGORIES.forEach((c) => used.add(c));
-    const cats = Array.from(used).sort((a, b) => a.localeCompare(b, "uz"));
-
-    const pillHtml = (label, value, active) => `
-      <button class="cat-pill ${active ? "active" : ""}" data-cat="${escapeHtml(value || "")}"
-        style="flex-shrink:0; padding:7px 14px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer;
-        border:1px solid ${active ? "transparent" : "var(--border)"};
-        background:${active ? "var(--navy)" : "var(--card)"}; color:${active ? "#fff" : "var(--text)"};">
-        ${escapeHtml(label)}
-      </button>`;
-
-    el("categoryPills").innerHTML =
-      pillHtml("Hammasi", "", !categoryFilter) +
-      cats.map((c) => pillHtml(c, c, categoryFilter === c)).join("");
-  }
-
-  el("categoryPills").addEventListener("click", (e) => {
-    const btn = e.target.closest(".cat-pill");
-    if (!btn) return;
-    categoryFilter = btn.dataset.cat || null;
-    renderList();
-  });
+  // Kategoriya taklif ro'yxati (siz aytgan "Laminat" shu yerda)
+  const DEFAULT_CATEGORIES = ["Laminat"];
 
   // ---- Kategoriyalar boʻlimi ----
   function renderCategories() {
