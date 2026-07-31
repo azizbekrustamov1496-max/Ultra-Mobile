@@ -124,14 +124,62 @@
 
   .stats-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
   .stat-box {
-    flex: 1 1 120px; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 16px; box-shadow: 0 1px 4px rgba(20,40,60,0.05); transition: transform .15s;
+    position: relative; overflow: hidden;
+    flex: 1 1 120px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; box-shadow: 0 1px 4px rgba(20,40,60,0.05); transition: transform .15s, box-shadow .15s;
   }
   .stat-box .label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.5px; }
-  .stat-box .value { font-size: 21px; font-weight: 700; margin-top: 4px; font-family: 'JetBrains Mono', monospace; color: var(--blue-stat); }
+  .stat-box .value { font-size: 22px; font-weight: 700; margin-top: 5px; font-family: 'JetBrains Mono', monospace; color: var(--blue-stat); }
   .filter-box { cursor: pointer; user-select: none; transition: border-color .15s, transform .1s; }
-  .filter-box:hover { transform: translateY(-1px); }
+  .filter-box:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(20,40,60,0.12); }
   .filter-box.active-filter { border: 2px solid var(--accent); }
+
+  /* Zamonaviy gradient statistika kartalari */
+  .stat-box.stat-grad-blue, .stat-box.stat-grad-green, .stat-box.stat-grad-red, .stat-box.stat-grad-purple {
+    border: none; color: #fff;
+  }
+  .stat-box.stat-grad-blue { background: linear-gradient(135deg, #2f6fed, #0B3D66); }
+  .stat-box.stat-grad-green { background: linear-gradient(135deg, #24c281, #12693f); }
+  .stat-box.stat-grad-red { background: linear-gradient(135deg, #f0645a, #8a2b23); }
+  .stat-box.stat-grad-purple { background: linear-gradient(135deg, #8b6ae8, #3e2e82); }
+  .stat-box.stat-grad-blue::before, .stat-box.stat-grad-green::before, .stat-box.stat-grad-red::before, .stat-box.stat-grad-purple::before {
+    content: ""; position: absolute; width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(255,255,255,0.10); top: -35px; right: -25px;
+  }
+  .stat-box.stat-grad-blue .label, .stat-box.stat-grad-green .label, .stat-box.stat-grad-red .label, .stat-box.stat-grad-purple .label { color: rgba(255,255,255,0.78); }
+  .stat-box.stat-grad-blue .value, .stat-box.stat-grad-green .value, .stat-box.stat-grad-red .value, .stat-box.stat-grad-purple .value { color: #fff; }
+  .stat-box.stat-grad-blue.active-filter, .stat-box.stat-grad-green.active-filter, .stat-box.stat-grad-red.active-filter, .stat-box.stat-grad-purple.active-filter { border: 2px solid rgba(255,255,255,0.85); }
+  .stat-icon {
+    position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+
+  /* Mahsulot rasmi */
+  .prod-thumb {
+    width: 48px; height: 48px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .prod-thumb-placeholder {
+    width: 48px; height: 48px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 19px; color: var(--text-mute); flex-shrink: 0;
+  }
+  .prod-thumb-lg { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border); }
+
+  /* Kategoriya rangli belgisi (burchakda) */
+  .cat-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700;
+    color: #fff; vertical-align: middle; margin-left: 7px; letter-spacing: 0.2px;
+  }
+  .cat-pill-0 { background: linear-gradient(135deg, #2f6fed, #1a4fb0); }
+  .cat-pill-1 { background: linear-gradient(135deg, #9a6df0, #6438c2); }
+  .cat-pill-2 { background: linear-gradient(135deg, #17b88a, #0e7a5c); }
+  .cat-pill-3 { background: linear-gradient(135deg, #f0645a, #b8362c); }
+  .cat-pill-4 { background: linear-gradient(135deg, #e2a13a, #a86e12); }
+
+  .low-stock-warn { color: var(--red-exp); font-size: 11px; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+
+  /* Tahrirlash / Sotish tugmalari - zamonaviy pill koʻrinish */
+  .btn-edit { background: linear-gradient(135deg, #2f6fed, #163f8f); color: #fff; }
+  .btn-sm-pill { padding: 8px 14px; font-size: 12px; margin-top: 0; border-radius: 9px; display: inline-flex; align-items: center; gap: 5px; }
 
   .category-card {
     background: var(--card); border: 1px solid var(--border); border-radius: 12px;
@@ -371,6 +419,14 @@
         <div class="field"><label>Dona narxi</label><input id="addRetail" class="mf" inputmode="decimal" placeholder="0" /></div>
         <div class="field"><label>Kategoriya</label><input id="addCategory" list="categoryList" placeholder="Masalan: Telefon" /></div>
         <datalist id="categoryList"></datalist>
+        <div class="field" style="grid-column: span 2;">
+          <label>Rasm (ixtiyoriy)</label>
+          <input type="file" id="addPhotoInput" accept="image/*" />
+          <div id="addPhotoPreviewWrap" style="display:none; align-items:center; gap:10px; margin-top:8px;">
+            <img id="addPhotoPreview" class="prod-thumb-lg" />
+            <button type="button" class="icon-btn del" id="addPhotoRemove">✕ Olib tashlash</button>
+          </div>
+        </div>
       </div>
       <button class="btn btn-primary" id="addBtn">Qoʻshish</button>
     </div>
@@ -561,10 +617,10 @@
   <!-- Ro'yxat -->
   <div class="tab-panel active" id="panel-list">
     <div class="stats-row">
-      <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
-      <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
-      <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
-      <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
+      <div class="stat-box filter-box stat-grad-blue" id="filterAll" data-filter="all"><div class="stat-icon">📦</div><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat-box filter-box stat-grad-green" id="filterOk" data-filter="instock"><div class="stat-icon">✅</div><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
+      <div class="stat-box filter-box stat-grad-red" id="filterOut" data-filter="outstock"><div class="stat-icon">⚠️</div><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
+      <div class="stat-box stat-grad-purple"><div class="stat-icon">💰</div><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
     </div>
 
     <div id="selectionToolbar" style="display:none; align-items:center; gap:10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap;">
@@ -587,7 +643,7 @@
     <table>
       <thead>
         <tr>
-          <th>Nomi</th><th>Soni</th><th>Tan narx</th><th>Ulgurchi narxi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
+          <th></th><th>Nomi</th><th>Soni</th><th>Tan narx</th><th>Ulgurchi narxi</th><th>Dona narxi</th><th>Holati</th><th>Oxirgi oʻzgartirgan</th><th></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -1044,23 +1100,37 @@
     el("cardList").innerHTML = list.map((it) => cardHtml(it)).join("");
   }
 
+  function photoThumbHtml(it, sizeClass) {
+    return it.photo
+      ? `<img src="${it.photo}" class="${sizeClass}" alt="" />`
+      : `<div class="prod-thumb-placeholder">📦</div>`;
+  }
+
+  function catPillHtml(it) {
+    return it.category ? `<span class="cat-pill ${catPillClass(it.category)}">${escapeHtml(it.category)}</span>` : "";
+  }
+
   function rowHtml(it) {
-    if (editId === it.id) return editRowHtml(it, "tr", 8);
+    if (editId === it.id) return editRowHtml(it, "tr", 9);
     const inStock = it.qty > 0;
     const sel = selectedIds.has(it.id);
+    const profit = (it.retail || 0) - (it.wholesale || 0);
     const actionsCell = selectMode
       ? `<input type="checkbox" class="row-checkbox" data-id="${it.id}" ${sel ? "checked" : ""} style="width:18px;height:18px;" />`
-      : `<button class="icon-btn start-edit" data-id="${it.id}">✎</button>
-         <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
-         <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>`;
+      : `<div style="display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
+           <button class="btn btn-edit btn-sm-pill start-edit" data-id="${it.id}">✏️ Tahrirlash</button>
+           <button class="btn btn-primary btn-sm-pill sell-btn" data-id="${it.id}">🛒 Sotish</button>
+           <button class="icon-btn del delete-item" data-id="${it.id}">🗑</button>
+         </div>`;
     return `
       <tr data-id="${it.id}" class="${selectMode ? "selectable-row" : ""} ${sel ? "row-selected" : ""}">
-        <td>${escapeHtml(it.name)}${it.category ? `<div class="meta-line">🏷️ ${escapeHtml(it.category)}</div>` : ""}</td>
+        <td>${photoThumbHtml(it, "prod-thumb")}</td>
+        <td>${escapeHtml(it.name)}${catPillHtml(it)}</td>
         <td class="mf">${it.qty}</td>
         <td class="mf">${fmt(it.wholesale)}</td>
         <td class="mf">${fmt(it.bulkPrice || 0)}</td>
-        <td class="mf">${fmt(it.retail)}</td>
-        <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span></td>
+        <td class="mf">${fmt(it.retail)}<div class="meta-line" style="color:var(--green-dark); font-weight:600;">Foyda: ${fmt(profit)}</div></td>
+        <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? `Omborda: ${it.qty} ta` : "Tugagan"}</span>${inStock && it.qty <= 3 ? `<div class="low-stock-warn">⚠️ Kam qoldi!</div>` : ""}</td>
         <td>
           <div>${escapeHtml(it.lastBy || "—")}</div>
           <div class="meta-line">${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
@@ -1073,26 +1143,39 @@
     if (editId === it.id) return editRowHtml(it, "div", null);
     const inStock = it.qty > 0;
     const sel = selectedIds.has(it.id);
+    const profit = (it.retail || 0) - (it.wholesale || 0);
     const actions = selectMode
       ? `<input type="checkbox" class="row-checkbox" data-id="${it.id}" ${sel ? "checked" : ""} style="width:18px;height:18px;" />`
-      : `<button class="icon-btn start-edit" data-id="${it.id}">✎ Tahrirlash</button>
-         <button class="icon-btn del delete-item" data-id="${it.id}">🗑 Oʻchirish</button>
-         <button class="btn btn-primary sell-btn" data-id="${it.id}" style="margin-top:0; padding:6px 12px; font-size:12px;">🛒 Sotish</button>`;
+      : `<div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+           <button class="btn btn-edit btn-sm-pill start-edit" data-id="${it.id}" style="flex:1;">✏️ Tahrirlash</button>
+           <button class="btn btn-primary btn-sm-pill sell-btn" data-id="${it.id}" style="flex:1;">🛒 Sotish</button>
+           <button class="icon-btn del delete-item" data-id="${it.id}" style="flex:0 0 auto;">🗑</button>
+         </div>`;
     return `
       <div class="item-card ${selectMode ? "selectable" : ""} ${sel ? "card-selected" : ""}" data-id="${it.id}">
-        <div class="row1">
-          <div class="name">${escapeHtml(it.name)}</div>
-          <span class="badge ${inStock ? "on" : "off"}">${inStock ? "Bor" : "Yoʻq"}</span>
+        <div style="display:flex; gap:12px; align-items:flex-start;">
+          ${photoThumbHtml(it, "prod-thumb-lg")}
+          <div style="flex:1; min-width:0;">
+            <div class="row1">
+              <div class="name">${escapeHtml(it.name)}${catPillHtml(it)}</div>
+              <span class="badge ${inStock ? "on" : "off"}">${inStock ? `Omborda: ${it.qty} ta` : "Tugagan"}</span>
+            </div>
+            <div class="prices">Tan narx: ${fmt(it.wholesale)} · Ulgurchi: ${fmt(it.bulkPrice || 0)} · Dona: ${fmt(it.retail)}</div>
+            <div class="meta-line" style="color:var(--green-dark); font-weight:600;">Foyda: ${fmt(profit)} (1 dona uchun)</div>
+            ${inStock && it.qty <= 3 ? `<div class="low-stock-warn">⚠️ Kam qoldi!</div>` : ""}
+            <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
+          </div>
         </div>
-        <div class="prices">Soni: ${it.qty} · Tan narx: ${fmt(it.wholesale)} · Ulgurchi: ${fmt(it.bulkPrice || 0)} · Dona: ${fmt(it.retail)}</div>
-        ${it.category ? `<div class="meta-line">🏷️ ${escapeHtml(it.category)}</div>` : ""}
-        <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
-        <div class="actions">${actions}</div>
+        ${actions}
       </div>`;
   }
 
   function editRowHtml(it, tag, colspan) {
     const inner = `
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <img class="edit-photo-preview prod-thumb-lg" src="${it.photo || ""}" style="${it.photo ? "" : "display:none;"}" />
+        <input type="file" class="edit-photo" accept="image/*" data-id="${it.id}" style="flex:1;" />
+      </div>
       <input class="edit-name" value="${escapeHtml(it.name)}" placeholder="Nomi" style="margin-bottom:4px;width:100%;" />
       <input class="edit-qty mf" value="${it.qty}" inputmode="numeric" placeholder="Soni" style="margin-bottom:4px;width:100%;" />
       <input class="edit-wholesale mf" value="${it.wholesale}" inputmode="decimal" placeholder="Tan narx" style="margin-bottom:4px;width:100%;" />
@@ -1105,7 +1188,55 @@
     return `<div class="item-card" data-id="${it.id}">${inner}</div>`;
   }
 
+  // ---- Rasmni kichraytirib base64 ga o'tkazish (Firebase hajmini tejash uchun) ----
+  function readAndCompressImage(file, maxSize, quality) {
+    maxSize = maxSize || 360; quality = quality || 0.72;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h && w > maxSize) { h = Math.round(h * (maxSize / w)); w = maxSize; }
+          else if (h >= w && h > maxSize) { w = Math.round(w * (maxSize / h)); h = maxSize; }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => reject(new Error("Rasmni ochib bo'lmadi."));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("Faylni o'qib bo'lmadi."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---- Kategoriya nomiga qarab doimiy rang belgisi tanlash ----
+  function catPillClass(cat) {
+    let h = 0;
+    for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) >>> 0;
+    return "cat-pill-" + (h % 5);
+  }
+
   // ---- Add item ----
+  let addPhotoData = "";
+  el("addPhotoInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      addPhotoData = await readAndCompressImage(file);
+      el("addPhotoPreview").src = addPhotoData;
+      el("addPhotoPreviewWrap").style.display = "flex";
+    } catch (err) { showError(err.message); }
+  });
+  el("addPhotoRemove").addEventListener("click", () => {
+    addPhotoData = "";
+    el("addPhotoInput").value = "";
+    el("addPhotoPreviewWrap").style.display = "none";
+  });
+
   el("addBtn").addEventListener("click", () => {
     if (!itemsRef) { showError("Firebase ulanmagan."); return; }
     const name = el("addName").value.trim();
@@ -1123,10 +1254,11 @@
 
     const id = uid();
     itemsRef.child(id).set({
-      name, qty, wholesale, bulkPrice, retail, category,
+      name, qty, wholesale, bulkPrice, retail, category, photo: addPhotoData || "",
       lastBy: staffName || "Nomaʼlum", updatedAt: Date.now(), createdAt: Date.now()
     }).then(() => {
       el("addName").value = ""; el("addQty").value = ""; el("addWholesale").value = ""; el("addBulk").value = ""; el("addRetail").value = ""; el("addCategory").value = "";
+      addPhotoData = ""; el("addPhotoInput").value = ""; el("addPhotoPreviewWrap").style.display = "none";
       showStatus("Qoʻshildi ✓");
     }).catch((e) => showError(e.message));
   });
@@ -1259,7 +1391,7 @@
 
     if (t.classList.contains("start-edit")) { editId = id; renderList(); }
     else if (t.classList.contains("sell-btn")) { openSellModal(id); }
-    else if (t.classList.contains("cancel-edit")) { editId = null; renderList(); }
+    else if (t.classList.contains("cancel-edit")) { delete editPhotoData[id]; editId = null; renderList(); }
     else if (t.classList.contains("delete-item")) {
       if (longPressFired) { longPressFired = false; return; }
       if (confirm("Ushbu tovarni oʻchirmoqchimisiz?")) {
@@ -1279,13 +1411,32 @@
         showError("Maʼlumotlarni toʻgʻri kiriting."); return;
       }
       showError("");
+      const photo = editPhotoData[id] !== undefined ? editPhotoData[id] : (items[id] ? (items[id].photo || "") : "");
       itemsRef.child(id).update({
-        name, qty, wholesale, bulkPrice, retail, category, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
-      }).then(() => { editId = null; }).catch((e) => showError(e.message));
+        name, qty, wholesale, bulkPrice, retail, category, photo, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
+      }).then(() => { delete editPhotoData[id]; editId = null; }).catch((e) => showError(e.message));
     }
   }
   el("tableBody").addEventListener("click", handleListClick);
   el("cardList").addEventListener("click", handleListClick);
+
+  // ---- Tahrirlashda rasmni almashtirish ----
+  let editPhotoData = {};
+  function handleEditPhotoChange(e) {
+    const input = e.target.closest(".edit-photo");
+    if (!input) return;
+    const file = input.files[0];
+    if (!file) return;
+    const id = input.dataset.id;
+    readAndCompressImage(file).then((data) => {
+      editPhotoData[id] = data;
+      const wrap = input.closest("div");
+      const preview = wrap ? wrap.querySelector(".edit-photo-preview") : null;
+      if (preview) { preview.src = data; preview.style.display = "inline-block"; }
+    }).catch((err) => showError(err.message));
+  }
+  el("tableBody").addEventListener("change", handleEditPhotoChange);
+  el("cardList").addEventListener("change", handleEditPhotoChange);
 
   // ---- Tanlash rejimi (bir nechtasini o'chirish) ----
   function enterSelectMode(firstId) {
