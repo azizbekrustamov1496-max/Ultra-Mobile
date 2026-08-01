@@ -1401,7 +1401,12 @@
     const row = t.closest("[data-id]");
     const id = row ? row.dataset.id : t.dataset.id;
 
-    if (t.classList.contains("start-edit")) { editId = id; renderList(); }
+    if (t.classList.contains("start-edit")) {
+      const scrollY = window.scrollY;
+      editId = id;
+      renderList();
+      window.scrollTo(0, scrollY);
+    }
     else if (t.classList.contains("sell-btn")) { openSellModal(id); }
     else if (t.classList.contains("cancel-edit")) { delete editPhotoData[id]; editId = null; renderList(); }
     else if (t.classList.contains("delete-item")) {
