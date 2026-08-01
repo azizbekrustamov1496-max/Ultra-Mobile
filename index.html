@@ -52,7 +52,9 @@
   }
   .mf { font-family: 'JetBrains Mono', monospace; }
   ::placeholder { color: var(--text-mute); }
-  input:focus, button:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button:focus { outline: none; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .topbar {
     background: linear-gradient(135deg, var(--navy), var(--navy-dark));
@@ -274,6 +276,13 @@
   .item-card .name { font-weight: 700; font-size: 15px; }
   .item-card .prices { font-size: 12px; color: var(--text-mute); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
   .item-card .actions { display: flex; gap: 6px; margin-top: 8px; }
+  .price-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px 10px;
+    margin-top: 10px; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .price-label { font-size: 10.5px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.3px; }
+  .price-val { font-size: 13.5px; font-weight: 700; margin-top: 2px; color: var(--text); }
+  .price-val.profit-val { color: var(--green-dark); }
 
   @media (max-width: 720px) {
     #panel-list table, #panel-expenses table, #panel-sale table, #panel-debts table, #panel-orderhistory table { display: none; }
@@ -617,10 +626,10 @@
   <!-- Ro'yxat -->
   <div class="tab-panel active" id="panel-list">
     <div class="stats-row">
-      <div class="stat-box filter-box stat-grad-blue" id="filterAll" data-filter="all"><div class="stat-icon">📦</div><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
-      <div class="stat-box filter-box stat-grad-green" id="filterOk" data-filter="instock"><div class="stat-icon">✅</div><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
-      <div class="stat-box filter-box stat-grad-red" id="filterOut" data-filter="outstock"><div class="stat-icon">⚠️</div><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
-      <div class="stat-box stat-grad-purple"><div class="stat-icon">💰</div><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
+      <div class="stat-box filter-box" id="filterAll" data-filter="all"><div class="label">Jami tovar</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat-box filter-box" id="filterOk" data-filter="instock"><div class="label">Bor</div><div class="value" id="statOk">0</div></div>
+      <div class="stat-box filter-box" id="filterOut" data-filter="outstock"><div class="label">Tugagan</div><div class="value" id="statOut">0</div></div>
+      <div class="stat-box"><div class="label">Ombor qiymati (tan narxi)</div><div class="value" id="statValue">0</div></div>
     </div>
 
     <div id="selectionToolbar" style="display:none; align-items:center; gap:10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap;">
@@ -1130,7 +1139,7 @@
         <td class="mf">${fmt(it.wholesale)}</td>
         <td class="mf">${fmt(it.bulkPrice || 0)}</td>
         <td class="mf">${fmt(it.retail)}<div class="meta-line" style="color:var(--green-dark); font-weight:600;">Foyda: ${fmt(profit)}</div></td>
-        <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? `Omborda: ${it.qty} ta` : "Tugagan"}</span>${inStock && it.qty <= 3 ? `<div class="low-stock-warn">⚠️ Kam qoldi!</div>` : ""}</td>
+        <td><span class="badge ${inStock ? "on" : "off"}">${inStock ? `Omborda: ${it.qty} ta` : "Tugagan"}</span></td>
         <td>
           <div>${escapeHtml(it.lastBy || "—")}</div>
           <div class="meta-line">${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
@@ -1160,9 +1169,12 @@
               <div class="name">${escapeHtml(it.name)}${catPillHtml(it)}</div>
               <span class="badge ${inStock ? "on" : "off"}">${inStock ? `Omborda: ${it.qty} ta` : "Tugagan"}</span>
             </div>
-            <div class="prices">Tan narx: ${fmt(it.wholesale)} · Ulgurchi: ${fmt(it.bulkPrice || 0)} · Dona: ${fmt(it.retail)}</div>
-            <div class="meta-line" style="color:var(--green-dark); font-weight:600;">Foyda: ${fmt(profit)} (1 dona uchun)</div>
-            ${inStock && it.qty <= 3 ? `<div class="low-stock-warn">⚠️ Kam qoldi!</div>` : ""}
+            <div class="price-grid">
+              <div class="price-cell"><div class="price-label">Tan narx</div><div class="price-val mf">${fmt(it.wholesale)}</div></div>
+              <div class="price-cell"><div class="price-label">Ulgurchi</div><div class="price-val mf">${fmt(it.bulkPrice || 0)}</div></div>
+              <div class="price-cell"><div class="price-label">Dona narxi</div><div class="price-val mf">${fmt(it.retail)}</div></div>
+              <div class="price-cell"><div class="price-label">Foyda</div><div class="price-val mf profit-val">${fmt(profit)}</div></div>
+            </div>
             <div class="meta-line">${escapeHtml(it.lastBy || "—")} · ${it.updatedAt ? fmtDateTime(it.updatedAt) : ""}</div>
           </div>
         </div>
