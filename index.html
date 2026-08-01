@@ -831,6 +831,10 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
+  // Qidiruvda probel/tire/pastki chiziqni e'tiborsiz qoldiradi: "Note 12" va "Note12" bir xil deb topiladi
+  function normalizeSearchText(s) {
+    return String(s).toLowerCase().replace(/[\s\-_]+/g, "");
+  }
 
   // ---- Kirish kodi (qurilmaga xos, localStorage orqali eslab qolinadi) ----
   const ACCESS_CODE = "3VbrQR3d";
@@ -1082,10 +1086,10 @@
   let categoryFilter = null; // null yoki kategoriya nomi
 
   function renderList() {
-    const query = el("searchInput").value.trim().toLowerCase();
+    const query = normalizeSearchText(el("searchInput").value.trim());
     const list = Object.entries(items)
       .map(([id, it]) => ({ id, ...it }))
-      .filter((it) => it.name.toLowerCase().includes(query) || (it.category || "").toLowerCase().includes(query))
+      .filter((it) => normalizeSearchText(it.name).includes(query) || normalizeSearchText(it.category || "").includes(query))
       .filter((it) => {
         if (stockFilter === "instock") return it.qty > 0;
         if (stockFilter === "outstock") return it.qty <= 0;
@@ -1279,11 +1283,11 @@
   let restockSelectedId = null;
 
   function renderRestockSearch() {
-    const q = el("restockSearchInput").value.trim().toLowerCase();
+    const q = normalizeSearchText(el("restockSearchInput").value.trim());
     const results = el("restockSearchResults");
     if (!q) { results.style.display = "none"; results.innerHTML = ""; return; }
     const matches = Object.entries(items)
-      .filter(([, it]) => it.name.toLowerCase().includes(q))
+      .filter(([, it]) => normalizeSearchText(it.name).includes(q))
       .slice(0, 8);
     if (matches.length === 0) {
       results.innerHTML = `<div style="padding:10px 12px; font-size:13px; color:var(--text-mute);">Topilmadi</div>`;
@@ -1408,7 +1412,11 @@
       window.scrollTo(0, scrollY);
     }
     else if (t.classList.contains("sell-btn")) { openSellModal(id); }
-    else if (t.classList.contains("cancel-edit")) { delete editPhotoData[id]; editId = null; renderList(); }
+    else if (t.classList.contains("cancel-edit")) {
+      const scrollY = window.scrollY;
+      delete editPhotoData[id]; editId = null; renderList();
+      window.scrollTo(0, scrollY);
+    }
     else if (t.classList.contains("delete-item")) {
       if (longPressFired) { longPressFired = false; return; }
       if (confirm("Ushbu tovarni oʻchirmoqchimisiz?")) {
@@ -1417,6 +1425,7 @@
         itemsRef.child(id).remove().catch((e) => showError(e.message));
       }
     } else if (t.classList.contains("save-edit")) {
+      const scrollY = window.scrollY;
       const scope = row;
       const name = scope.querySelector(".edit-name").value.trim();
       const qty = parseInt(scope.querySelector(".edit-qty").value, 10);
@@ -1431,7 +1440,7 @@
       const photo = editPhotoData[id] !== undefined ? editPhotoData[id] : (items[id] ? (items[id].photo || "") : "");
       itemsRef.child(id).update({
         name, qty, wholesale, bulkPrice, retail, category, photo, lastBy: staffName || "Nomaʼlum", updatedAt: Date.now()
-      }).then(() => { delete editPhotoData[id]; editId = null; }).catch((e) => showError(e.message));
+      }).then(() => { delete editPhotoData[id]; editId = null; window.scrollTo(0, scrollY); }).catch((e) => showError(e.message));
     }
   }
   el("tableBody").addEventListener("click", handleListClick);
@@ -1820,11 +1829,11 @@
   let cart = {}; // { itemId: {name, qty, price} }
 
   function renderOrderSearch() {
-    const q = el("orderSearchInput").value.trim().toLowerCase();
+    const q = normalizeSearchText(el("orderSearchInput").value.trim());
     const results = el("orderSearchResults");
     if (!q) { results.style.display = "none"; results.innerHTML = ""; return; }
     const matches = Object.entries(items)
-      .filter(([, it]) => it.name.toLowerCase().includes(q))
+      .filter(([, it]) => normalizeSearchText(it.name).includes(q))
       .slice(0, 8);
     if (matches.length === 0) {
       results.innerHTML = `<div style="padding:10px 12px; font-size:13px; color:var(--text-mute);">Topilmadi</div>`;
